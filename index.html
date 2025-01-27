@@ -28,17 +28,28 @@
         h2 {
             color: #333;
         }
-        ul {
-            list-style: none;
-            padding: 0;
+        .word-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
         }
-        ul li {
-            padding: 0.5rem 0;
+        .word-item {
             display: flex;
             align-items: center;
+            padding: 5px 10px;
+            background-color: #f1f1f1;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .word-item:hover {
+            background-color: #e0e0e0;
+        }
+        .emoji {
+            margin-right: 8px;
         }
         button {
-            margin-left: 10px;
+            margin-top: 10px;
             padding: 5px 10px;
             border: none;
             background-color: #0078D7;
@@ -48,9 +59,6 @@
         }
         button:hover {
             background-color: #005bb5;
-        }
-        .emoji {
-            margin-right: 8px;
         }
     </style>
 </head>
@@ -130,15 +138,18 @@
                     const section = document.createElement('section');
                     section.innerHTML = `<h3>${name}</h3>`;
 
-                    const ul = document.createElement('ul');
+                    const wordContainer = document.createElement('div');
+                    wordContainer.className = 'word-container';
 
                     words.forEach(({ word, emoji }) => {
-                        const li = document.createElement('li');
-                        li.innerHTML = `${emoji || ''} ${word} <button onclick="addToSentence('${word}')">加入句子</button>`;
-                        ul.appendChild(li);
+                        const wordItem = document.createElement('div');
+                        wordItem.className = 'word-item';
+                        wordItem.innerHTML = `${emoji || ''} ${word}`;
+                        wordItem.onclick = () => addToSentence(word);
+                        wordContainer.appendChild(wordItem);
                     });
 
-                    section.appendChild(ul);
+                    section.appendChild(wordContainer);
                     wordListDiv.appendChild(section);
                 });
             } catch (error) {
