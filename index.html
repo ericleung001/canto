@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>廣東話學習網站</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+        }
+        header {
+            background-color: #0078D7;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+        section {
+            margin: 1rem;
+            padding: 1rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            color: #333;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        ul li {
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: center;
+        }
+        button {
+            margin-left: 10px;
+            padding: 5px 10px;
+            border: none;
+            background-color: #0078D7;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #005bb5;
+        }
+        .emoji {
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>廣東話學習網站</h1>
+        <p>幫助言語發展的小朋友輕鬆學習廣東話</p>
+    </header>
+
+    <section id="categories">
+        <h2>詞語分類</h2>
+        <div id="word-list">正在加載中...</div>
+    </section>
+
+    <section id="sentence-builder">
+        <h2>組合句子</h2>
+        <p id="current-sentence">目前句子：<span id="sentence"></span></p>
+        <button onclick="playSentence()">播放句子</button>
+        <button onclick="clearSentence()">清空句子</button>
+    </section>
+
+    <script>
+        const sheetId = '1rPV6OItEhA9VSRfiUWwem6KNzMUzeSNmDEzaoDIH3FM'; // 替換為你的 Google Sheet ID
+        const apiKey = 'AIzaSyDLNfSUG5lZdlF5OJGYSJCWanvQdTSytm0'; // 替換為你的 Google API Key
+        const sheetUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/canto!A1:E100?key=${apiKey}`;
+
+        let sentence = [];
+
+        function playText(text) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'zh-HK';
+            speechSynthesis.speak(utterance);
+        }
+
+        function addToSentence(word) {
+            sentence.push(word);
+            document.getElementById('sentence').textContent = sentence.join(' ');
+            playText(word);
+        }
+
+        function playSentence() {
+            const sentenceText = sentence.join(' ');
+            if (sentenceText) {
+                playText(sentenceText);
+            } else {
+                alert('請先加入一些詞語到句子！');
+            }
+        }
+
+        function clearSentence() {
+            sentence = [];
+            document.getElementById('sentence').textContent = '';
+        }
+
+        async function loadWords() {
+            try {
+                const response = await fetch(sheetUrl);
+                const data = await response.json();
+                const rows = data.values;
+
+                const categories = [];
+
+                rows.slice(1).forEach(([category, word, , emoji, order]) => {
+                    if (!categories.find(c => c.name === category)) {
+                        categories.push({ name: category, order: parseInt(order) || 0, words: [] });
+                    }
+                    const categoryObj = categories.find(c => c.name === category);
+                    categoryObj.words.push({ word, emoji });
+                });
+
+                categories.sort((a, b) => a.order - b.order);
+
+                const wordListDiv = document.getElementById('word-list');
+                wordListDiv.innerHTML = '';
+
+                categories.forEach(({ name, words }) => {
+                    const section = document.createElement('section');
+                    section.innerHTML = `<h3>${name}</h3>`;
+
+                    const ul = document.createElement('ul');
+
+                    words.forEach(({ word, emoji }) => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `${emoji || ''} ${word} <button onclick="addToSentence('${word}')">加入句子</button>`;
+                        ul.appendChild(li);
+                    });
+
+                    section.appendChild(ul);
+                    wordListDiv.appendChild(section);
+                });
+            } catch (error) {
+                console.error('Error loading words:', error);
+            }
+        }
+
+        loadWords();
+    </script>
+</body>
+</html>
