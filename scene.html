@@ -62,7 +62,7 @@
     <h1>場景遊戲</h1>
     <p>請選擇合適的對話</p>
     <div class="scene">
-        <img id="scene-image" src="" alt="場景圖片" width="30%">
+        <img id="scene-image" src="" alt="場景圖片" width="100%">
     </div>
     <p id="question-text"></p>
     <button class="replay-btn" onclick="playText(currentQuestionText)">再讀一次問題</button>
@@ -165,7 +165,8 @@
             const optionsContainer = document.getElementById('options-container');
             optionsContainer.innerHTML = '';
 
-            answers.filter(answer => answer.trim() !== "").forEach(answer => {
+            const shuffledAnswers = answers.filter(answer => answer.trim() !== "").sort(() => 0.5 - Math.random());
+            shuffledAnswers.forEach(answer => {
                 const optionDiv = document.createElement('div');
                 optionDiv.className = 'option';
                 optionDiv.textContent = answer;
