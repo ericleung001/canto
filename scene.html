@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>場景遊戲 - 廣東話學習</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+        }
+        .scene {
+            margin: 20px auto;
+            width: 80%;
+            max-width: 600px;
+        }
+        .options {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .option {
+            background-color: #0078D7;
+            color: white;
+            padding: 10px;
+            margin: 10px;
+            border-radius: 5px;
+            width: 80%;
+            max-width: 400px;
+            cursor: pointer;
+        }
+        .option:hover {
+            background-color: #005bb5;
+        }
+        .submit-btn, .next-btn, .restart-btn, .replay-btn {
+            background-color: #ffcc00;
+            color: black;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            margin-top: 20px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .submit-btn:hover, .next-btn:hover, .restart-btn:hover, .replay-btn:hover {
+            background-color: #e6b800;
+        }
+        .score {
+            font-size: 18px;
+            margin-top: 10px;
+        }
+        .correct-answer {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>場景遊戲</h1>
+    <p>請選擇合適的對話</p>
+    <div class="scene">
+        <img id="scene-image" src="" alt="場景圖片" width="30%">
+    </div>
+    <p id="question-text"></p>
+    <button class="replay-btn" onclick="playText(currentQuestionText)">再讀一次問題</button>
+    <div class="options" id="options-container"></div>
+    <button class="submit-btn" onclick="submitAnswer()">提交答案</button>
+    <button class="next-btn" onclick="nextQuestion()" style="display:none;">下一題</button>
+    <p class="score">分數: <span id="score">0</span></p>
+    <p id="correct-answer" class="correct-answer" style="display:none;"></p>
+    <button class="restart-btn" onclick="restartGame()" style="display:none;">再玩一次</button>
+
+    <script>
+        const sheetId = '1rPV6OItEhA9VSRfiUWwem6KNzMUzeSNmDEzaoDIH3FM'; // 替換為你的 Google Sheet ID
+        const apiKey = 'AIzaSyDLNfSUG5lZdlF5OJGYSJCWanvQdTSytm0'; // 替換為你的 Google API Key
+        const sheetUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/game!A1:G999?key=${apiKey}`;
+
+        let questions = [];
+        let currentQuestionIndex = 0;
+        let selectedAnswer = '';
+        let correctAnswer = '';
+        let currentQuestionText = '';
+        let score = 0;
+
+        function playText(text) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'zh-HK';
+            speechSynthesis.speak(utterance);
+        }
+
+        function selectAnswer(answer) {
+            selectedAnswer = answer;
+            playText(answer);
+        }
+
+        function submitAnswer() {
+            if (selectedAnswer) {
+                if (selectedAnswer === correctAnswer) {
+                    score++;
+                    document.getElementById('score').textContent = score;
+                    alert('答對了！分數 +1');
+                } else {
+                    const correctText = `正確答案是：${correctAnswer}`;
+                    document.getElementById('correct-answer').textContent = correctText;
+                    document.getElementById('correct-answer').style.display = 'block';
+                    playText(correctText);
+                }
+                document.querySelector('.submit-btn').style.display = 'none';
+                document.querySelector('.next-btn').style.display = 'inline-block';
+            } else {
+                alert('請先選擇一個答案！');
+            }
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < 10 && currentQuestionIndex < questions.length) {
+                loadQuestion(currentQuestionIndex);
+            } else {
+                alert(`遊戲結束！你的總分數是：${score}/10`);
+                document.querySelector('.next-btn').style.display = 'none';
+                document.querySelector('.restart-btn').style.display = 'inline-block';
+            }
+        }
+
+        function restartGame() {
+            currentQuestionIndex = 0;
+            score = 0;
+            document.getElementById('score').textContent = score;
+            document.getElementById('correct-answer').style.display = 'none';
+            document.querySelector('.restart-btn').style.display = 'none';
+            loadQuestion(currentQuestionIndex);
+        }
+
+        async function loadGame() {
+            try {
+                const response = await fetch(sheetUrl);
+                const data = await response.json();
+                const rows = data.values;
+                if (!rows || rows.length < 2) return;
+
+                const [header, ...questionData] = rows;
+                questions = questionData.sort(() => 0.5 - Math.random()).slice(0, 10);
+                currentQuestionIndex = 0;
+                loadQuestion(currentQuestionIndex);
+            } catch (error) {
+                console.error('Error loading game:', error);
+            }
+        }
+
+        function loadQuestion(index) {
+            const [sceneImage, question, correct, ...answers] = questions[index];
+            document.getElementById('scene-image').src = sceneImage;
+            document.getElementById('question-text').textContent = question;
+            currentQuestionText = question;
+            playText(question);
+            correctAnswer = correct;
+            document.getElementById('correct-answer').style.display = 'none';
+            document.querySelector('.submit-btn').style.display = 'inline-block';
+            document.querySelector('.next-btn').style.display = 'none';
+
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+
+            answers.filter(answer => answer.trim() !== "").forEach(answer => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'option';
+                optionDiv.textContent = answer;
+                optionDiv.onclick = () => selectAnswer(answer);
+                optionsContainer.appendChild(optionDiv);
+            });
+        }
+
+        loadGame();
+    </script>
+</body>
+</html>
