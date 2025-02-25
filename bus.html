@@ -48,7 +48,7 @@
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間v4</h1>
+    <h1>查詢巴士最近站點與到站時間v5</h1>
     <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 1)">
     <select id="company">
         <option value="">請選擇巴士公司</option>
@@ -93,6 +93,8 @@
             result.innerHTML = '正在獲取定位並查詢...';
 
             try {
+                // 若測試特定位置，可取消註釋以下模擬座標
+                // const position = { coords: { latitude: 22.4041, longitude: 113.9618 } };
                 const position = await getUserLocation();
                 const userLat = position.coords.latitude;
                 const userLon = position.coords.longitude;
@@ -310,7 +312,7 @@
         }
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 3371;
+            const R = 6371;
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
             const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
