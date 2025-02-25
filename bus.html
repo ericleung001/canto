@@ -48,8 +48,8 @@
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間v5</h1>
-    <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 1)">
+    <h1>查詢巴士最近站點與到站時間v6</h1>
+    <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 960)">
     <select id="company">
         <option value="">請選擇巴士公司</option>
         <option value="citybus">城巴</option>
@@ -93,8 +93,6 @@
             result.innerHTML = '正在獲取定位並查詢...';
 
             try {
-                // 若測試特定位置，可取消註釋以下模擬座標
-                // const position = { coords: { latitude: 22.4041, longitude: 113.9618 } };
                 const position = await getUserLocation();
                 const userLat = position.coords.latitude;
                 const userLon = position.coords.longitude;
@@ -145,7 +143,7 @@
                         }
 
                         const distance = calculateDistance(userLat, userLon, stopLat, stopLon);
-                        console.log(`站點：${stopInfo.data.name_tc}, 座標：(${stopLat}, ${stopLon}), 距離：${distance.toFixed(2)} 公里`);
+                        console.log(`城巴站點：${stopInfo.data.name_tc}, 座標：(${stopLat}, ${stopLon}), 距離：${distance.toFixed(2)} 公里`);
                         allStops.push({
                             stopId: stop.stop,
                             name: stopInfo.data.name_tc || '未知站名',
@@ -197,32 +195,52 @@
 
         async function checkKmbRoute(route, userLat, userLon, result, output) {
             try {
-                const routeResponse = await fetch(`${KMB_DATA_URL}route.json`);
-                if (!routeResponse.ok) throw new Error('路線資料獲取失敗');
+                const routeResponse = await fetch(`${KMB_DATA_URL}route.json`, { mode: 'cors' });
+                if (!routeResponse.ok) {
+                    console.error(`九巴路線資料請求失敗，狀態碼：${routeResponse.status}`);
+                    throw new Error(`路線資料獲取失敗（狀態碼：${routeResponse.status}）`);
+                }
                 const routeData = await routeResponse.json();
+                console.log('九巴路線資料獲取成功，檢查路線 960 是否存在...');
 
                 const routeInfo = routeData.data.find(r => r.route === route);
-                if (!routeInfo) throw new Error('路線未找到');
+                if (!routeInfo) {
+                    console.error(`路線 ${route} 未喺九巴路線資料中找到`);
+                    throw new Error('路線未找到');
+                }
+                console.log(`找到九巴路線 ${route}，bound: ${routeInfo.bound}`);
 
-                const stopResponse = await fetch(`${KMB_DATA_URL}route_stop.json`);
-                if (!stopResponse.ok) throw new Error('站點資料獲取失敗');
+                const stopResponse = await fetch(`${KMB_DATA_URL}route_stop.json`, { mode: 'cors' });
+                if (!stopResponse.ok) {
+                    console.error(`九巴站點資料請求失敗，狀態碼：${stopResponse.status}`);
+                    throw new Error(`站點資料獲取失敗（狀態碼：${stopResponse.status}）`);
+                }
                 const stopData = await stopResponse.json();
 
                 const stops = stopData.data.filter(s => s.route === route);
-                if (!stops.length) throw new Error('無可用站點數據');
+                if (!stops.length) {
+                    console.error(`九巴路線 ${route} 無可用站點數據`);
+                    throw new Error('無可用站點數據');
+                }
 
                 let allStops = [];
                 for (let stop of stops) {
-                    const stopInfoResponse = await fetch(`${KMB_DATA_URL}stop/${stop.stop}.json`);
-                    if (!stopInfoResponse.ok) continue;
+                    const stopInfoResponse = await fetch(`${KMB_DATA_URL}stop/${stop.stop}.json`, { mode: 'cors' });
+                    if (!stopInfoResponse.ok) {
+                        console.warn(`站點 ${stop.stop} 資料獲取失敗，跳過`);
+                        continue;
+                    }
                     const stopInfo = await stopInfoResponse.json();
 
                     const stopLat = parseFloat(stopInfo.data.lat || 0);
                     const stopLon = parseFloat(stopInfo.data.long || 0);
-                    if (isNaN(stopLat) || isNaN(stopLon)) continue;
+                    if (isNaN(stopLat) || isNaN(stopLon)) {
+                        console.warn(`站點 ${stopInfo.data.name_tc} 經緯度無效：${stopInfo.data.lat}, ${stopInfo.data.long}`);
+                        continue;
+                    }
 
                     const distance = calculateDistance(userLat, userLon, stopLat, stopLon);
-                    console.log(`站點：${stopInfo.data.name_tc}, 座標：(${stopLat}, ${stopLon}), 距離：${distance.toFixed(2)} 公里`);
+                    console.log(`九巴站點：${stopInfo.data.name_tc}, 座標：(${stopLat}, ${stopLon}), 距離：${distance.toFixed(2)} 公里`);
                     allStops.push({
                         stopId: stop.stop,
                         name: stopInfo.data.name_tc || '未知站名',
@@ -259,7 +277,7 @@
                 let allStops = [];
                 for (let stop of MTR_BUS_STOPS[route]) {
                     const distance = calculateDistance(userLat, userLon, stop.lat, stop.lon);
-                    console.log(`站點：${stop.name}, 座標：(${stop.lat}, ${stop.lon}), 距離：${distance.toFixed(2)} 公里`);
+                    console.log(`港鐵巴士站點：${stop.name}, 座標：(${stop.lat}, ${stop.lon}), 距離：${distance.toFixed(2)} 公里`);
                     allStops.push({
                         stopId: stop.stopId,
                         name: stop.name,
