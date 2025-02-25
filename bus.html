@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>巴士最近站點與到站時間</title>
+    <title>巴士最近站點與到站時間v3</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -48,7 +48,7 @@
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間v2</h1>
+    <h1>查詢巴士最近站點與到站時間</h1>
     <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 1)">
     <select id="company">
         <option value="">請選擇巴士公司</option>
@@ -63,7 +63,6 @@
         const CITYBUS_BASE_URL = 'https://rt.data.gov.hk/v2/transport/citybus/';
         const CITYBUS_COMPANY_ID = 'CTB';
         const KMB_DATA_URL = 'https://data.etabus.gov.hk/kmb/';
-        const KMB_ETA_URL = 'http://etav3.kmb.hk/'; // 需後端代理
 
         // 港鐵巴士靜態站點資料（示例）
         const MTR_BUS_STOPS = {
@@ -218,8 +217,7 @@
                         stopId: stop.stop,
                         name: stopInfo.data.name_tc || '未知站名',
                         direction: stop.bound === 'O' ? 'outbound' : 'inbound',
-                        distance: distance,
-                        seq: stop.seq
+                        distance: distance
                     });
                 }
 
@@ -235,11 +233,10 @@
                     if (!directionStop) continue;
 
                     output += `${directionStop.direction === 'inbound' ? '去程' : '回程'}（${directionStop.name}，距離約 ${directionStop.distance.toFixed(2)} 公里）<br>`;
-                    // 九巴 ETA 需後端代理
-                    output += `到站時間：需後端支持查詢（示例：5, 10 分鐘）<br>`;
+                    output += `到站時間：無法即時查詢（示例：5, 10 分鐘）<br>`;
                 }
 
-                result.innerHTML = output + '<br>備註：九巴即時到站時間需後端代理支持。';
+                result.innerHTML = output + '<br>備註：九巴即時到站時間需後端支持，GitHub Pages 無法提供。';
             } catch (error) {
                 result.innerHTML = `九巴路線 ${route} 查詢失敗：${error.message}`;
             }
