@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>巴士最近站點與到站時間v3</title>
+    <title>巴士最近站點與到站時間</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -48,7 +48,7 @@
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間</h1>
+    <h1>查詢巴士最近站點與到站時間v3</h1>
     <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 1)">
     <select id="company">
         <option value="">請選擇巴士公司</option>
@@ -96,20 +96,23 @@
                 const position = await getUserLocation();
                 const userLat = position.coords.latitude;
                 const userLon = position.coords.longitude;
+                console.log(`用戶定位：緯度 ${userLat}, 經度 ${userLon}`);
+
+                let output = `定位座標：(${userLat.toFixed(4)}, ${userLon.toFixed(4)})<br>`;
 
                 if (company === 'citybus') {
-                    await checkCitybusRoute(route, userLat, userLon, result);
+                    await checkCitybusRoute(route, userLat, userLon, result, output);
                 } else if (company === 'kmb') {
-                    await checkKmbRoute(route, userLat, userLon, result);
+                    await checkKmbRoute(route, userLat, userLon, result, output);
                 } else if (company === 'mtrbus') {
-                    await checkMtrBusRoute(route, userLat, userLon, result);
+                    await checkMtrBusRoute(route, userLat, userLon, result, output);
                 }
             } catch (error) {
                 result.innerHTML = `查詢路線 ${route} 時出錯：${error.message}<br>若使用 iOS，請確保在 HTTPS 環境並允許定位許可。`;
             }
         }
 
-        async function checkCitybusRoute(route, userLat, userLon, result) {
+        async function checkCitybusRoute(route, userLat, userLon, result, output) {
             try {
                 const routeResponse = await fetch(`${CITYBUS_BASE_URL}route/${CITYBUS_COMPANY_ID}/${route}`);
                 if (!routeResponse.ok) throw new Error('路線未找到');
@@ -134,9 +137,13 @@
 
                         const stopLat = parseFloat(stopInfo.data.latitude || 0);
                         const stopLon = parseFloat(stopInfo.data.longitude || 0);
-                        if (isNaN(stopLat) || isNaN(stopLon)) continue;
+                        if (isNaN(stopLat) || isNaN(stopLon)) {
+                            console.warn(`站點 ${stopInfo.data.name_tc} 經緯度無效：${stopInfo.data.latitude}, ${stopInfo.data.longitude}`);
+                            continue;
+                        }
 
                         const distance = calculateDistance(userLat, userLon, stopLat, stopLon);
+                        console.log(`站點：${stopInfo.data.name_tc}, 座標：(${stopLat}, ${stopLon}), 距離：${distance.toFixed(2)} 公里`);
                         allStops.push({
                             stopId: stop.stop,
                             name: stopInfo.data.name_tc || '未知站名',
@@ -153,7 +160,7 @@
                 const nearestOutbound = allStops.find(stop => stop.direction === 'outbound');
                 const nearestStop = allStops[0];
 
-                let output = `你所在位置最近的站點：${nearestStop.name} (城巴)<br>`;
+                output += `你所在位置最近的站點：${nearestStop.name} (城巴)<br>`;
                 for (let directionStop of [nearestInbound, nearestOutbound]) {
                     if (!directionStop) continue;
 
@@ -182,11 +189,11 @@
 
                 result.innerHTML = output;
             } catch (error) {
-                result.innerHTML = `城巴路線 ${route} 查詢失敗：${error.message}`;
+                result.innerHTML = output + `城巴路線 ${route} 查詢失敗：${error.message}`;
             }
         }
 
-        async function checkKmbRoute(route, userLat, userLon, result) {
+        async function checkKmbRoute(route, userLat, userLon, result, output) {
             try {
                 const routeResponse = await fetch(`${KMB_DATA_URL}route.json`);
                 if (!routeResponse.ok) throw new Error('路線資料獲取失敗');
@@ -213,6 +220,7 @@
                     if (isNaN(stopLat) || isNaN(stopLon)) continue;
 
                     const distance = calculateDistance(userLat, userLon, stopLat, stopLon);
+                    console.log(`站點：${stopInfo.data.name_tc}, 座標：(${stopLat}, ${stopLon}), 距離：${distance.toFixed(2)} 公里`);
                     allStops.push({
                         stopId: stop.stop,
                         name: stopInfo.data.name_tc || '未知站名',
@@ -228,7 +236,7 @@
                 const nearestOutbound = allStops.find(stop => stop.direction === 'outbound');
                 const nearestStop = allStops[0];
 
-                let output = `你所在位置最近的站點：${nearestStop.name} (九巴)<br>`;
+                output += `你所在位置最近的站點：${nearestStop.name} (九巴)<br>`;
                 for (let directionStop of [nearestInbound, nearestOutbound]) {
                     if (!directionStop) continue;
 
@@ -238,17 +246,18 @@
 
                 result.innerHTML = output + '<br>備註：九巴即時到站時間需後端支持，GitHub Pages 無法提供。';
             } catch (error) {
-                result.innerHTML = `九巴路線 ${route} 查詢失敗：${error.message}`;
+                result.innerHTML = output + `九巴路線 ${route} 查詢失敗：${error.message}`;
             }
         }
 
-        async function checkMtrBusRoute(route, userLat, userLon, result) {
+        async function checkMtrBusRoute(route, userLat, userLon, result, output) {
             try {
                 if (!MTR_BUS_STOPS[route]) throw new Error('路線未找到');
 
                 let allStops = [];
                 for (let stop of MTR_BUS_STOPS[route]) {
                     const distance = calculateDistance(userLat, userLon, stop.lat, stop.lon);
+                    console.log(`站點：${stop.name}, 座標：(${stop.lat}, ${stop.lon}), 距離：${distance.toFixed(2)} 公里`);
                     allStops.push({
                         stopId: stop.stopId,
                         name: stop.name,
@@ -262,7 +271,7 @@
                 const nearestOutbound = allStops.find(stop => stop.direction === 'outbound');
                 const nearestStop = allStops[0];
 
-                let output = `你所在位置最近的站點：${nearestStop.name} (港鐵巴士)<br>`;
+                output += `你所在位置最近的站點：${nearestStop.name} (港鐵巴士)<br>`;
                 for (let directionStop of [nearestInbound, nearestOutbound]) {
                     if (!directionStop) continue;
 
@@ -272,7 +281,7 @@
 
                 result.innerHTML = output + '<br>備註：港鐵巴士無公開即時到站時間。';
             } catch (error) {
-                result.innerHTML = `港鐵巴士路線 ${route} 查詢失敗：${error.message}`;
+                result.innerHTML = output + `港鐵巴士路線 ${route} 查詢失敗：${error.message}`;
             }
         }
 
