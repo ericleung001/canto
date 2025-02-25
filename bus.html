@@ -48,7 +48,7 @@
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間v6</h1>
+    <h1>查詢巴士最近站點與到站時間v7</h1>
     <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 960)">
     <select id="company">
         <option value="">請選擇巴士公司</option>
@@ -63,6 +63,7 @@
         const CITYBUS_BASE_URL = 'https://rt.data.gov.hk/v2/transport/citybus/';
         const CITYBUS_COMPANY_ID = 'CTB';
         const KMB_DATA_URL = 'https://data.etabus.gov.hk/kmb/';
+        const KMB_ETA_API = 'https://data.etabus.gov.hk/v1/transport/kmb/eta/';
 
         // 港鐵巴士靜態站點資料（示例）
         const MTR_BUS_STOPS = {
@@ -138,7 +139,7 @@
                         const stopLat = parseFloat(stopInfo.data.latitude || 0);
                         const stopLon = parseFloat(stopInfo.data.longitude || 0);
                         if (isNaN(stopLat) || isNaN(stopLon)) {
-                            console.warn(`站點 ${stopInfo.data.name_tc} 經緯度無效：${stopInfo.data.latitude}, ${stopInfo.data.longitude}`);
+                            console.warn(`城巴站點 ${stopInfo.data.name_tc} 經緯度無效：${stopInfo.data.latitude}, ${stopInfo.data.longitude}`);
                             continue;
                         }
 
@@ -196,46 +197,29 @@
         async function checkKmbRoute(route, userLat, userLon, result, output) {
             try {
                 const routeResponse = await fetch(`${KMB_DATA_URL}route.json`, { mode: 'cors' });
-                if (!routeResponse.ok) {
-                    console.error(`九巴路線資料請求失敗，狀態碼：${routeResponse.status}`);
-                    throw new Error(`路線資料獲取失敗（狀態碼：${routeResponse.status}）`);
-                }
+                if (!routeResponse.ok) throw new Error(`路線資料獲取失敗（狀態碼：${routeResponse.status}）`);
                 const routeData = await routeResponse.json();
-                console.log('九巴路線資料獲取成功，檢查路線 960 是否存在...');
 
                 const routeInfo = routeData.data.find(r => r.route === route);
-                if (!routeInfo) {
-                    console.error(`路線 ${route} 未喺九巴路線資料中找到`);
-                    throw new Error('路線未找到');
-                }
-                console.log(`找到九巴路線 ${route}，bound: ${routeInfo.bound}`);
+                if (!routeInfo) throw new Error('路線未找到');
 
                 const stopResponse = await fetch(`${KMB_DATA_URL}route_stop.json`, { mode: 'cors' });
-                if (!stopResponse.ok) {
-                    console.error(`九巴站點資料請求失敗，狀態碼：${stopResponse.status}`);
-                    throw new Error(`站點資料獲取失敗（狀態碼：${stopResponse.status}）`);
-                }
+                if (!stopResponse.ok) throw new Error(`站點資料獲取失敗（狀態碼：${stopResponse.status}）`);
                 const stopData = await stopResponse.json();
 
                 const stops = stopData.data.filter(s => s.route === route);
-                if (!stops.length) {
-                    console.error(`九巴路線 ${route} 無可用站點數據`);
-                    throw new Error('無可用站點數據');
-                }
+                if (!stops.length) throw new Error('無可用站點數據');
 
                 let allStops = [];
                 for (let stop of stops) {
                     const stopInfoResponse = await fetch(`${KMB_DATA_URL}stop/${stop.stop}.json`, { mode: 'cors' });
-                    if (!stopInfoResponse.ok) {
-                        console.warn(`站點 ${stop.stop} 資料獲取失敗，跳過`);
-                        continue;
-                    }
+                    if (!stopInfoResponse.ok) continue;
                     const stopInfo = await stopInfoResponse.json();
 
                     const stopLat = parseFloat(stopInfo.data.lat || 0);
                     const stopLon = parseFloat(stopInfo.data.long || 0);
                     if (isNaN(stopLat) || isNaN(stopLon)) {
-                        console.warn(`站點 ${stopInfo.data.name_tc} 經緯度無效：${stopInfo.data.lat}, ${stopInfo.data.long}`);
+                        console.warn(`九巴站點 ${stopInfo.data.name_tc} 經緯度無效：${stopInfo.data.lat}, ${stopInfo.data.long}`);
                         continue;
                     }
 
@@ -245,7 +229,8 @@
                         stopId: stop.stop,
                         name: stopInfo.data.name_tc || '未知站名',
                         direction: stop.bound === 'O' ? 'outbound' : 'inbound',
-                        distance: distance
+                        distance: distance,
+                        seq: stop.seq
                     });
                 }
 
@@ -261,10 +246,35 @@
                     if (!directionStop) continue;
 
                     output += `${directionStop.direction === 'inbound' ? '去程' : '回程'}（${directionStop.name}，距離約 ${directionStop.distance.toFixed(2)} 公里）<br>`;
-                    output += `到站時間：無法即時查詢（示例：5, 10 分鐘）<br>`;
+                    try {
+                        const etaResponse = await fetch(`${KMB_ETA_API}${directionStop.stopId}/${route}/1`, { mode: 'cors' });
+                        if (!etaResponse.ok) {
+                            console.error(`九巴 ETA 查詢失敗，狀態碼：${etaResponse.status}`);
+                            output += `到站時間：查詢失敗（可能因 CORS 限制）<br>`;
+                            continue;
+                        }
+                        const etaData = await etaResponse.json();
+                        if (etaData?.data?.length) {
+                            const etaTimes = etaData.data
+                                .filter(eta => eta.dir === (directionStop.direction === 'inbound' ? 'I' : 'O') && eta.eta)
+                                .map(eta => {
+                                    const etaTime = new Date(eta.eta);
+                                    const now = new Date();
+                                    const diff = Math.round((etaTime - now) / 60000);
+                                    return diff > 0 ? `${diff}` : '即將到達';
+                                })
+                                .join(', ');
+                            output += `到站時間：${etaTimes || '暫無到站時間'} 分鐘<br>`;
+                        } else {
+                            output += `到站時間：暫無到站時間<br>`;
+                        }
+                    } catch (error) {
+                        console.error(`九巴 ETA 查詢錯誤：${error.message}`);
+                        output += `到站時間：無法查詢（${error.message}）<br>`;
+                    }
                 }
 
-                result.innerHTML = output + '<br>備註：九巴即時到站時間需後端支持，GitHub Pages 無法提供。';
+                result.innerHTML = output + '<br>備註：若九巴 ETA 失敗，可能是 GitHub Pages 的 CORS 限制。';
             } catch (error) {
                 result.innerHTML = output + `九巴路線 ${route} 查詢失敗：${error.message}`;
             }
