@@ -191,8 +191,7 @@
                 const stopData = await stopResponse.json();
 
                 const stops = stopData.data.filter(s => s.route === route);
-                if 
-                (!stops.length) return false;
+                if (!stops.length) return false;
 
                 let allStops = [];
                 for (let stop of stops) {
