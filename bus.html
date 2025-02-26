@@ -58,7 +58,7 @@
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間v4.3</h1>
+    <h1>查詢巴士最近站點與到站時間v4.4</h1>
     <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 960)">
     <select id="company">
         <option value="">請選擇巴士公司</option>
@@ -70,7 +70,7 @@
     <div id="result"></div>
 
     <script>
-        const CITYBUS_STOP_API = 'https://rt.data.gov.hk/v2/transport/citybus/stop';
+        const CITYBUS_STOP_API = 'https://rt.data.gov.hk/v2/transport/citybus/stop'; // 移除 :1
         const CITYBUS_ETA_API = 'https://rt.data.gov.hk/v2/transport/citybus/eta/ctb';
         const KMB_ROUTE_STOP_API = 'https://data.etabus.gov.hk/v1/transport/kmb/route-stop';
         const KMB_STOP_ETA_API = 'https://data.etabus.gov.hk/v1/transport/kmb/stop-eta';
@@ -140,7 +140,7 @@
                     if (routeEtas.some(eta => eta.dir === 'I') && distance < minDistanceI) {
                         minDistanceI = distance;
                         nearestInbound = {
-                            stop: stop.stop, // 改用 stop 代替 stopId
+                            stop: stop.stop,
                             name: stop.name_tc,
                             lat: stopLat,
                             lon: stopLon,
@@ -151,7 +151,7 @@
                     if (routeEtas.some(eta => eta.dir === 'O') && distance < minDistanceO) {
                         minDistanceO = distance;
                         nearestOutbound = {
-                            stop: stop.stop, // 改用 stop 代替 stopId
+                            stop: stop.stop,
                             name: stop.name_tc,
                             lat: stopLat,
                             lon: stopLon,
@@ -168,7 +168,7 @@
                     nearestOutbound = nearestOutbound || fallbackStop;
                 }
 
-                // Step 3: 用 stop number 獲取 ETA
+                // Step 3: 用 stop 獲取 ETA
                 const etaInboundResponse = await fetch(`${CITYBUS_ETA_API}/${nearestInbound.stop}`);
                 if (!etaInboundResponse.ok) throw new Error(`Inbound ETA 查詢失敗（狀態碼：${etaInboundResponse.status}）`);
                 const etaInboundData = await etaInboundResponse.json();
