@@ -52,7 +52,7 @@
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間v3.1</h1>
+    <h1>查詢巴士最近站點與到站時間</h1>
     <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 960)">
     <select id="company">
         <option value="">請選擇巴士公司</option>
@@ -71,14 +71,6 @@
         const KMB_STOP_ETA_API = 'https://data.etabus.gov.hk/v1/transport/kmb/stop-eta';
         const KMB_STOP_API = 'https://data.etabus.gov.hk/v1/transport/kmb/stop';
         const MTR_BUS_API = 'https://rt.data.gov.hk/v1/transport/mtr/bus/getSchedule';
-
-        // 簡單方向映射（可根據路線擴充）
-        const DIRECTION_MAP = {
-            '50M': { 'I': '屯門方向', 'O': '市區方向' },
-            '66M': { 'I': '荃灣(如心廣場)', 'O': '屯門(大興邨)' },
-            '960': { 'I': '屯門方向', 'O': '市區方向' },
-            'K51': { 'I': '屯門方向', 'O': '市區方向' }
-        };
 
         async function getBusTime() {
             let route = document.getElementById("route").value.trim().toUpperCase();
@@ -148,8 +140,7 @@
                             lat: stopLat,
                             lon: stopLon,
                             distance: distance,
-                            dir: routeStop.dir,
-                            destination: DIRECTION_MAP[route] ? DIRECTION_MAP[route][routeStop.dir] : (routeStop.dir === 'I' ? '屯門方向' : '市區方向')
+                            dir: routeStop.dir
                         };
                     }
                 }
@@ -170,8 +161,8 @@
                         const now = new Date();
                         const diff = Math.round((etaTime - now) / 60000);
                         const timeStr = etaTime.toLocaleTimeString('zh-HK', { hour12: false });
-                        const destination = DIRECTION_MAP[route] ? DIRECTION_MAP[route][eta.dir] : (eta.dir === 'I' ? '屯門方向' : '市區方向');
-                        return `${route}${destination}: ${timeStr} ${diff > 0 ? diff : '即將到達'} 分鐘`;
+                        const direction = eta.dir === 'I' ? '去程' : '回程';
+                        return `${route}${direction}: ${timeStr} ${diff > 0 ? diff : '即將到達'} 分鐘`;
                     });
                 output += etaTimes.length ? etaTimes.join('<br>') : `${route}：暫無到站時間`;
 
@@ -215,8 +206,7 @@
                             lat: stopLat,
                             lon: stopLon,
                             distance: distance,
-                            dir: routeStop.bound,
-                            destination: DIRECTION_MAP[route] ? DIRECTION_MAP[route][routeStop.bound] : (routeStop.bound === 'I' ? '屯門方向' : '市區方向')
+                            dir: routeStop.bound
                         };
                     }
                 }
@@ -237,8 +227,8 @@
                         const now = new Date();
                         const diff = Math.round((etaTime - now) / 60000);
                         const timeStr = etaTime.toLocaleTimeString('zh-HK', { hour12: false });
-                        const destination = DIRECTION_MAP[route] ? DIRECTION_MAP[route][eta.dir] : (eta.dir === 'I' ? '屯門方向' : '市區方向');
-                        return `${route}${destination}: ${timeStr} ${diff > 0 ? diff : '即將到達'} 分鐘`;
+                        const direction = eta.dir === 'I' ? '去程' : '回程';
+                        return `${route}${direction}: ${timeStr} ${diff > 0 ? diff : '即將到達'} 分鐘`;
                     });
                 output += etaTimes.length ? etaTimes.join('<br>') : `${route}：暫無到站時間`;
 
@@ -266,8 +256,8 @@
                         const now = new Date();
                         const diff = Math.round((etaTime - now) / 60000);
                         const timeStr = etaTime.toLocaleTimeString('zh-HK', { hour12: false });
-                        const destination = DIRECTION_MAP[route] ? DIRECTION_MAP[route][eta.dir] : (eta.dir === 'I' ? '屯門方向' : '市區方向');
-                        return `${route}${destination}: ${timeStr} ${diff > 0 ? diff : '即將到達'} 分鐘`;
+                        const direction = eta.dir === 'I' ? '去程' : '回程';
+                        return `${route}${direction}: ${timeStr} ${diff > 0 ? diff : '即將到達'} 分鐘`;
                     });
                 output += etaTimes.length ? etaTimes.join('<br>') : `${route}：暫無到站時間`;
 
