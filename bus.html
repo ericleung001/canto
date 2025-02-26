@@ -52,7 +52,7 @@
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間v3.5</h1>
+    <h1>查詢巴士最近站點與到站時間v3.6</h1>
     <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 960)">
     <select id="company">
         <option value="">請選擇巴士公司</option>
@@ -136,7 +136,7 @@
 
                 if (!nearestStop) throw new Error('無有效站點數據');
 
-                // Step 2: 驗證路線並獲取方向
+                // Step 2: 驗證路線
                 const routeResponse = await fetch(CITYBUS_ROUTE_API);
                 if (!routeResponse.ok) throw new Error(`路線資料獲取失敗（狀態碼：${routeResponse.status}）`);
                 const routeData = await routeResponse.json();
@@ -225,8 +225,8 @@
                         const now = new Date();
                         const diff = Math.round((etaTime - now) / 60000);
                         const timeStr = etaTime.toLocaleTimeString('zh-HK', { hour12: false });
-                        const direction = eta.dir === 'I' ? '去程' : '回程';
-                        return `${route}${direction}: ${timeStr} ${diff > 0 ? diff : '即將到達'} 分鐘`;
+                        const direction = eta.dir === 'I' ? '去' : '回';
+                        return `${direction}：${route}(${eta.dest_tc}): ${nearestStop.name} ${timeStr} (${diff > 0 ? diff : '即將到達'} 分鐘)`;
                     });
                 output += etaTimes.length ? etaTimes.join('<br>') : `${route}：暫無到站時間`;
 
