@@ -58,7 +58,7 @@
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間v4.5</h1>
+    <h1>查詢巴士最近站點與到站時間v4.6</h1>
     <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 960)">
     <select id="company">
         <option value="">請選擇巴士公司</option>
@@ -70,7 +70,8 @@
     <div id="result"></div>
 
     <script>
-        const CITYBUS_STOP_API = 'https://rt.data.gov.hk/v2/transport/citybus/stop'; // 移除 :1
+        const CITYBUS_STOP_API = 'https://rt.data.gov.hk/v2/transport/citybus/stop';
+        const CITYBUS_ROUTE_API = 'https://rt.data.gov.hk/v2/transport/citybus/route/ctb';
         const CITYBUS_ETA_API = 'https://rt.data.gov.hk/v2/transport/citybus/eta/ctb';
         const KMB_ROUTE_STOP_API = 'https://data.etabus.gov.hk/v1/transport/kmb/route-stop';
         const KMB_STOP_ETA_API = 'https://data.etabus.gov.hk/v1/transport/kmb/stop-eta';
@@ -119,21 +120,27 @@
                 const stopData = await stopResponse.json();
                 const allStops = stopData.data;
 
-                // Step 2: 搵最近站點並按 dir:I 同 dir:O 分開
+                // Step 2: 配對路線
+                const routeResponse = await fetch(CITYBUS_ROUTE_API);
+                if (!routeResponse.ok) throw new Error(`路線資料獲取失敗（狀態碼：${routeResponse.status}）`);
+                const routeData = await routeResponse.json();
+                const routeInfo = routeData.data.find(r => r.route === route);
+                if (!routeInfo) throw new Error('路線未找到');
+
+                // Step 3: 搵最近站點並分 dir:I 同 dir:O
                 let nearestInbound = null;
                 let nearestOutbound = null;
                 let minDistanceI = Infinity;
                 let minDistanceO = Infinity;
 
                 for (let stop of allStops) {
-                    const stopLat = parseFloat(stop.lat || 0);
-                    const stopLon = parseFloat(stop.long || 0);
+                    const stopLat = parseFloat(stop.latitude || 0);
+                    const stopLon = parseFloat(stop.longitude || 0);
                     if (isNaN(stopLat) || isNaN(stopLon)) continue;
 
                     const distance = calculateDistance(userLat, userLon, stopLat, stopLon);
                     const etaResponse = await fetch(`${CITYBUS_ETA_API}/${stop.stop}`);
-                    if (!etaResponse.ok) continue;
-
+                    if (!etaResponse.ok) throw new Error(`ETA 查詢失敗（狀態碼：${etaResponse.status}）`);
                     const etaData = await etaResponse.json();
                     const routeEtas = etaData.data.filter(eta => eta.route === route && eta.eta);
 
@@ -168,7 +175,7 @@
                     nearestOutbound = nearestOutbound || fallbackStop;
                 }
 
-                // Step 3: 用 stop 獲取 ETA
+                // Step 4: 用 stop 獲取 ETA
                 const etaInboundResponse = await fetch(`${CITYBUS_ETA_API}/${nearestInbound.stop}`);
                 if (!etaInboundResponse.ok) throw new Error(`Inbound ETA 查詢失敗（狀態碼：${etaInboundResponse.status}）`);
                 const etaInboundData = await etaInboundResponse.json();
@@ -219,7 +226,7 @@
 
                 result.innerHTML = output;
             } catch (error) {
-                result.innerHTML = output + `城巴路線 ${route} 查詢失敗：${error.message}<br>備註：可能因 CORS 或 API 限制，建議用後端代理解決。`;
+                result.innerHTML = output + `城巴路線 ${route} 查詢失敗：${error.message}<br>備註：因唔使用後端代理，可能報 422 或 CORS 錯誤，建議部署到 HTTPS 環境或使用代理。`;
             }
         }
 
@@ -327,7 +334,7 @@
 
                 result.innerHTML = output;
             } catch (error) {
-                result.innerHTML = output + `九巴路線 ${route} 查詢失敗：${error.message}<br>備註：可能因 CORS 或 API 限制，建議用後端代理解決。`;
+                result.innerHTML = output + `九巴路線 ${route} 查詢失敗：${error.message}<br>備註：請檢查網絡或使用後端代理解決 CORS/422 問題。`;
             }
         }
 
@@ -348,13 +355,13 @@
                         const diff = Math.round((etaTime - now) / 60000);
                         const timeStr = etaTime.toLocaleTimeString('zh-HK', { hour12: false });
                         const direction = eta.dir === 'I' ? '去程' : '回程';
-                        return `${route}${direction}: ${timeStr} ${diff > 0 ? diff : '即將到達'} 分鐘`;
+                        return `${route}${direction}: ${timeStr} (${diff > 0 ? diff : '即將到達'} 分鐘)`;
                     });
                 output += etaTimes.length ? etaTimes.join('<br>') : `${route}：暫無到站時間`;
 
                 result.innerHTML = output + '<br>備註：港鐵巴士無公開站點位置 API，距離無法計算。';
             } catch (error) {
-                result.innerHTML = output + `港鐵巴士路線 ${route} 查詢失敗：${error.message}<br>備註：可能因 CORS 或 API 限制，建議用後端代理解決。`;
+                result.innerHTML = output + `港鐵巴士路線 ${route} 查詢失敗：${error.message}<br>備註：請檢查網絡或使用後端代理解決 CORS/422 問題。`;
             }
         }
 
