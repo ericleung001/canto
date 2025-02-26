@@ -58,7 +58,7 @@
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間v4.93</h1>
+    <h1>查詢巴士最近站點與到站時間v4.94</h1>
     <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 960)">
     <select id="company">
         <option value="">請選擇巴士公司</option>
@@ -71,7 +71,7 @@
 
     <script>
         const CITYBUS_ROUTE_STOP_API = 'https://rt.data.gov.hk/v2/transport/citybus/route/ctb';
-        const CITYBUS_STOP_API = 'https://rt.data.gov.hk/v2/transport/citybus/stop';
+        const CITYBUS_STOP_API = 'https://rt.data.gov.hk/v2/transport/citybus/route-stop/ctb';
         const CITYBUS_ETA_API = 'https://rt.data.gov.hk/v2/transport/citybus/eta/ctb';
         const KMB_ROUTE_STOP_API = 'https://data.etabus.gov.hk/v1/transport/kmb/route-stop';
         const KMB_STOP_ETA_API = 'https://data.etabus.gov.hk/v1/transport/kmb/stop-eta';
@@ -122,7 +122,7 @@
                 if (!routeStops.length) throw new Error('路線未找到');
                
                 // Step 2: 獲取站點位置
-                const stopResponse = await fetch(CITYBUS_ROUTE_STOP_API);
+                const stopResponse = await fetch(CITYBUS_STOP_API);
                 if (!stopResponse.ok) throw new Error(`站點資料獲取失敗（狀態碼：${stopResponse.status}）`);
                 const stopData = await stopResponse.json();
                 const allStops = stopData.data;
