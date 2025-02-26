@@ -38,6 +38,10 @@
             margin-top: 20px;
             font-size: 4vw;
             line-height: 1.5;
+            text-align: left;
+            max-width: 90%;
+            margin-left: auto;
+            margin-right: auto;
             word-wrap: break-word;
         }
         @media (max-width: 600px) {
@@ -48,7 +52,7 @@
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間v3.0</h1>
+    <h1>查詢巴士最近站點與到站時間v3.1</h1>
     <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 960)">
     <select id="company">
         <option value="">請選擇巴士公司</option>
@@ -67,6 +71,14 @@
         const KMB_STOP_ETA_API = 'https://data.etabus.gov.hk/v1/transport/kmb/stop-eta';
         const KMB_STOP_API = 'https://data.etabus.gov.hk/v1/transport/kmb/stop';
         const MTR_BUS_API = 'https://rt.data.gov.hk/v1/transport/mtr/bus/getSchedule';
+
+        // 簡單方向映射（可根據路線擴充）
+        const DIRECTION_MAP = {
+            '50M': { 'I': '屯門方向', 'O': '市區方向' },
+            '66M': { 'I': '荃灣(如心廣場)', 'O': '屯門(大興邨)' },
+            '960': { 'I': '屯門方向', 'O': '市區方向' },
+            'K51': { 'I': '屯門方向', 'O': '市區方向' }
+        };
 
         async function getBusTime() {
             let route = document.getElementById("route").value.trim().toUpperCase();
@@ -137,7 +149,7 @@
                             lon: stopLon,
                             distance: distance,
                             dir: routeStop.dir,
-                            destination: routeStop.dir === 'I' ? '屯門方向' : '市區方向'
+                            destination: DIRECTION_MAP[route] ? DIRECTION_MAP[route][routeStop.dir] : (routeStop.dir === 'I' ? '屯門方向' : '市區方向')
                         };
                     }
                 }
@@ -150,25 +162,18 @@
                 const etaData = await etaResponse.json();
                 if (!etaData.data || !etaData.data.length) throw new Error('無到站時間數據');
 
-                output += `你所在位置最近的站點：${nearestStop.name} (城巴)<br>`;
-                const directions = ['inbound', 'outbound'];
-                for (let dir of directions) {
-                    const directionStop = nearestStop.dir === (dir === 'inbound' ? 'I' : 'O') ? nearestStop : null;
-                    if (!directionStop) continue;
-
-                    output += `${dir === 'inbound' ? '去程' : '回程'}（${directionStop.name}，距離約 ${directionStop.distance.toFixed(2)} 公里）<br>`;
-                    const etaTimes = etaData.data
-                        .filter(eta => eta.route === route && eta.dir === (dir === 'inbound' ? 'I' : 'O') && eta.eta)
-                        .map(eta => {
-                            const etaTime = new Date(eta.eta);
-                            const now = new Date();
-                            const diff = Math.round((etaTime - now) / 60000);
-                            const timeStr = etaTime.toLocaleTimeString('zh-HK', { hour12: false });
-                            return `${route} ${directionStop.name}（${directionStop.destination}）${timeStr} ${diff > 0 ? diff : '即將到達'} 分鐘`;
-                        })
-                        .join(', ');
-                    output += `到站時間：${etaTimes || '暫無到站時間'}<br>`;
-                }
+                output += `最近巴士站：${nearestStop.name}<br>`;
+                const etaTimes = etaData.data
+                    .filter(eta => eta.route === route && eta.eta)
+                    .map(eta => {
+                        const etaTime = new Date(eta.eta);
+                        const now = new Date();
+                        const diff = Math.round((etaTime - now) / 60000);
+                        const timeStr = etaTime.toLocaleTimeString('zh-HK', { hour12: false });
+                        const destination = DIRECTION_MAP[route] ? DIRECTION_MAP[route][eta.dir] : (eta.dir === 'I' ? '屯門方向' : '市區方向');
+                        return `${route}${destination}: ${timeStr} ${diff > 0 ? diff : '即將到達'} 分鐘`;
+                    });
+                output += etaTimes.length ? etaTimes.join('<br>') : `${route}：暫無到站時間`;
 
                 result.innerHTML = output;
             } catch (error) {
@@ -211,7 +216,7 @@
                             lon: stopLon,
                             distance: distance,
                             dir: routeStop.bound,
-                            destination: routeStop.bound === 'I' ? '屯門方向' : '市區方向'
+                            destination: DIRECTION_MAP[route] ? DIRECTION_MAP[route][routeStop.bound] : (routeStop.bound === 'I' ? '屯門方向' : '市區方向')
                         };
                     }
                 }
@@ -224,25 +229,18 @@
                 const etaData = await etaResponse.json();
                 if (!etaData.data || !etaData.data.length) throw new Error('無到站時間數據');
 
-                output += `你所在位置最近的站點：${nearestStop.name} (九巴)<br>`;
-                const directions = ['inbound', 'outbound'];
-                for (let dir of directions) {
-                    const directionStop = nearestStop.dir === (dir === 'inbound' ? 'I' : 'O') ? nearestStop : null;
-                    if (!directionStop) continue;
-
-                    output += `${dir === 'inbound' ? '去程' : '回程'}（${directionStop.name}，距離約 ${directionStop.distance.toFixed(2)} 公里）<br>`;
-                    const etaTimes = etaData.data
-                        .filter(eta => eta.route === route && eta.dir === (dir === 'inbound' ? 'I' : 'O') && eta.eta)
-                        .map(eta => {
-                            const etaTime = new Date(eta.eta);
-                            const now = new Date();
-                            const diff = Math.round((etaTime - now) / 60000);
-                            const timeStr = etaTime.toLocaleTimeString('zh-HK', { hour12: false });
-                            return `${route} ${directionStop.name}（${directionStop.destination}）${timeStr} ${diff > 0 ? diff : '即將到達'} 分鐘`;
-                        })
-                        .join(', ');
-                    output += `到站時間：${etaTimes || '暫無到站時間'}<br>`;
-                }
+                output += `最近巴士站：${nearestStop.name}<br>`;
+                const etaTimes = etaData.data
+                    .filter(eta => eta.route === route && eta.eta)
+                    .map(eta => {
+                        const etaTime = new Date(eta.eta);
+                        const now = new Date();
+                        const diff = Math.round((etaTime - now) / 60000);
+                        const timeStr = etaTime.toLocaleTimeString('zh-HK', { hour12: false });
+                        const destination = DIRECTION_MAP[route] ? DIRECTION_MAP[route][eta.dir] : (eta.dir === 'I' ? '屯門方向' : '市區方向');
+                        return `${route}${destination}: ${timeStr} ${diff > 0 ? diff : '即將到達'} 分鐘`;
+                    });
+                output += etaTimes.length ? etaTimes.join('<br>') : `${route}：暫無到站時間`;
 
                 result.innerHTML = output;
             } catch (error) {
@@ -258,28 +256,20 @@
                 const etaData = await etaResponse.json();
                 if (!etaData.data || !etaData.data.length) throw new Error('路線未找到或無到站時間數據');
 
-                // 假設用第一個站點作為最近站點（無位置資料）
+                // 假設用第一個站點（無位置資料）
                 const stop = etaData.data[0];
-                output += `你所在位置最近的站點：${stop.stop || '未知站名'} (港鐵巴士)<br>`;
-                const directions = ['inbound', 'outbound'];
-                for (let dir of directions) {
-                    const dirStops = etaData.data.filter(eta => eta.dir === (dir === 'inbound' ? 'I' : 'O'));
-                    if (!dirStops.length) continue;
-
-                    const directionStop = dirStops[0];
-                    output += `${dir === 'inbound' ? '去程' : '回程'}（${directionStop.stop || '未知站名'}，距離未知）<br>`;
-                    const etaTimes = dirStops
-                        .filter(eta => eta.route === route && eta.eta)
-                        .map(eta => {
-                            const etaTime = new Date(eta.eta);
-                            const now = new Date();
-                            const diff = Math.round((etaTime - now) / 60000);
-                            const timeStr = etaTime.toLocaleTimeString('zh-HK', { hour12: false });
-                            return `${route} ${directionStop.stop || '未知站名'}（${eta.dir === 'I' ? '屯門方向' : '市區方向'}）${timeStr} ${diff > 0 ? diff : '即將到達'} 分鐘`;
-                        })
-                        .join(', ');
-                    output += `到站時間：${etaTimes || '暫無到站時間'}<br>`;
-                }
+                output += `最近巴士站：${stop.stop || '未知站名'}<br>`;
+                const etaTimes = etaData.data
+                    .filter(eta => eta.route === route && eta.eta)
+                    .map(eta => {
+                        const etaTime = new Date(eta.eta);
+                        const now = new Date();
+                        const diff = Math.round((etaTime - now) / 60000);
+                        const timeStr = etaTime.toLocaleTimeString('zh-HK', { hour12: false });
+                        const destination = DIRECTION_MAP[route] ? DIRECTION_MAP[route][eta.dir] : (eta.dir === 'I' ? '屯門方向' : '市區方向');
+                        return `${route}${destination}: ${timeStr} ${diff > 0 ? diff : '即將到達'} 分鐘`;
+                    });
+                output += etaTimes.length ? etaTimes.join('<br>') : `${route}：暫無到站時間`;
 
                 result.innerHTML = output + '<br>備註：港鐵巴士無公開站點位置 API，距離無法計算。';
             } catch (error) {
