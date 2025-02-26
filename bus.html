@@ -52,7 +52,7 @@
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間v3.3</h1>
+    <h1>查詢巴士最近站點與到站時間v3.5</h1>
     <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 960)">
     <select id="company">
         <option value="">請選擇巴士公司</option>
@@ -64,9 +64,9 @@
     <div id="result"></div>
 
     <script>
-        const CITYBUS_ROUTE_STOP_API = 'https://rt.data.gov.hk/v2/transport/citybus/route-stop/ctb';
-        const CITYBUS_ETA_API = 'https://rt.data.gov.hk/v2/transport/citybus/eta/ctb';
         const CITYBUS_STOP_API = 'https://rt.data.gov.hk/v2/transport/citybus/stop';
+        const CITYBUS_ROUTE_API = 'https://rt.data.gov.hk/v2/transport/citybus/route/ctb';
+        const CITYBUS_ETA_API = 'https://rt.data.gov.hk/v2/transport/citybus/eta/ctb';
         const KMB_ROUTE_STOP_API = 'https://data.etabus.gov.hk/v1/transport/kmb/route-stop';
         const KMB_STOP_ETA_API = 'https://data.etabus.gov.hk/v1/transport/kmb/stop-eta';
         const KMB_STOP_API = 'https://data.etabus.gov.hk/v1/transport/kmb/stop';
@@ -108,14 +108,7 @@
 
         async function checkCitybusRoute(route, userLat, userLon, result, output) {
             try {
-                // Step 1: 獲取路線所有站點
-                const routeStopResponse = await fetch(CITYBUS_ROUTE_STOP_API);
-                if (!routeStopResponse.ok) throw new Error(`路線站點資料獲取失敗（狀態碼：${routeStopResponse.status}）`);
-                const routeStopData = await routeStopResponse.json();
-                const routeStops = routeStopData.data.filter(stop => stop.route === route);
-                if (!routeStops.length) throw new Error('路線未找到');
-
-                // Step 2: 獲取站點位置並計算最近站點
+                // Step 1: 獲取所有城巴站點並搵最近站點
                 const stopResponse = await fetch(CITYBUS_STOP_API);
                 if (!stopResponse.ok) throw new Error(`站點資料獲取失敗（狀態碼：${stopResponse.status}）`);
                 const stopData = await stopResponse.json();
@@ -123,10 +116,7 @@
 
                 let nearestStop = null;
                 let minDistance = Infinity;
-                for (let routeStop of routeStops) {
-                    const stop = allStops.find(s => s.stop === routeStop.stop);
-                    if (!stop) continue;
-
+                for (let stop of allStops) {
                     const stopLat = parseFloat(stop.latitude || 0);
                     const stopLon = parseFloat(stop.longitude || 0);
                     if (isNaN(stopLat) || isNaN(stopLon)) continue;
@@ -139,13 +129,19 @@
                             name: stop.name_tc,
                             lat: stopLat,
                             lon: stopLon,
-                            distance: distance,
-                            dir: routeStop.dir
+                            distance: distance
                         };
                     }
                 }
 
                 if (!nearestStop) throw new Error('無有效站點數據');
+
+                // Step 2: 驗證路線並獲取方向
+                const routeResponse = await fetch(CITYBUS_ROUTE_API);
+                if (!routeResponse.ok) throw new Error(`路線資料獲取失敗（狀態碼：${routeResponse.status}）`);
+                const routeData = await routeResponse.json();
+                const routeInfo = routeData.data.find(r => r.route === route);
+                if (!routeInfo) throw new Error('路線未找到');
 
                 // Step 3: 獲取最近站點嘅 ETA
                 const etaResponse = await fetch(`${CITYBUS_ETA_API}/${nearestStop.stopId}`);
@@ -153,18 +149,20 @@
                 const etaData = await etaResponse.json();
                 if (!etaData.data || !etaData.data.length) throw new Error('無到站時間數據');
 
+                // 過濾出輸入路線嘅 ETA
+                const routeEtas = etaData.data.filter(eta => eta.route === route && eta.eta);
+                if (!routeEtas.length) throw new Error(`最近站點 ${nearestStop.name} 無 ${route} 嘅到站時間`);
+
                 output += `最近巴士站：${nearestStop.name}<br>`;
-                const etaTimes = etaData.data
-                    .filter(eta => eta.route === route && eta.eta)
-                    .map(eta => {
-                        const etaTime = new Date(eta.eta);
-                        const now = new Date();
-                        const diff = Math.round((etaTime - now) / 60000);
-                        const timeStr = etaTime.toLocaleTimeString('zh-HK', { hour12: false });
-                        const direction = eta.dir === 'I' ? '去程' : '回程';
-                        return `${route}${direction}: ${timeStr} ${diff > 0 ? diff : '即將到達'} 分鐘`;
-                    });
-                output += etaTimes.length ? etaTimes.join('<br>') : `${route}：暫無到站時間`;
+                const etaTimes = routeEtas.map(eta => {
+                    const etaTime = new Date(eta.eta);
+                    const now = new Date();
+                    const diff = Math.round((etaTime - now) / 60000);
+                    const timeStr = etaTime.toLocaleTimeString('zh-HK', { hour12: false });
+                    const direction = eta.dir === 'I' ? '去程' : '回程';
+                    return `${route}${direction}: ${timeStr} ${diff > 0 ? diff : '即將到達'} 分鐘`;
+                });
+                output += etaTimes.join('<br>');
 
                 result.innerHTML = output;
             } catch (error) {
