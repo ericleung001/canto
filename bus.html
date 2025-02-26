@@ -58,7 +58,7 @@
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間v4.4</h1>
+    <h1>查詢巴士最近站點與到站時間v4.5</h1>
     <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 960)">
     <select id="company">
         <option value="">請選擇巴士公司</option>
@@ -126,8 +126,8 @@
                 let minDistanceO = Infinity;
 
                 for (let stop of allStops) {
-                    const stopLat = parseFloat(stop.latitude || 0);
-                    const stopLon = parseFloat(stop.longitude || 0);
+                    const stopLat = parseFloat(stop.lat || 0);
+                    const stopLon = parseFloat(stop.long || 0);
                     if (isNaN(stopLat) || isNaN(stopLon)) continue;
 
                     const distance = calculateDistance(userLat, userLon, stopLat, stopLon);
