@@ -52,7 +52,7 @@
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間v3.6</h1>
+    <h1>查詢巴士最近站點與到站時間v3.7</h1>
     <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 960)">
     <select id="company">
         <option value="">請選擇巴士公司</option>
@@ -172,7 +172,7 @@
 
         async function checkKmbRoute(route, userLat, userLon, result, output) {
             try {
-                // Step 1: 獲取路線所有站點
+                // Step 1: 獲取路線所有站點（含 seq）
                 const routeStopResponse = await fetch(KMB_ROUTE_STOP_API);
                 if (!routeStopResponse.ok) throw new Error(`路線站點資料獲取失敗（狀態碼：${routeStopResponse.status}）`);
                 const routeStopData = await routeStopResponse.json();
@@ -204,7 +204,8 @@
                             lat: stopLat,
                             lon: stopLon,
                             distance: distance,
-                            dir: routeStop.bound
+                            seq: routeStop.seq,
+                            bound: routeStop.bound // 保存 bound 用於匹配 ETA
                         };
                     }
                 }
@@ -225,8 +226,10 @@
                         const now = new Date();
                         const diff = Math.round((etaTime - now) / 60000);
                         const timeStr = etaTime.toLocaleTimeString('zh-HK', { hour12: false });
-                        const direction = eta.dir === 'I' ? '去' : '回';
-                        return `${direction}：${route}(${eta.dest_tc}): ${nearestStop.name} ${timeStr} (${diff > 0 ? diff : '即將到達'} 分鐘)`;
+                        // 用 seq 單雙數判斷方向，假設單數去程，雙數回程
+                        const direction = (nearestStop.seq % 2 === 1) ? '去' : '回';
+                        const seqDisplay = (nearestStop.seq % 2 === 1) ? 1 : 2; // 顯示 seq:1 或 seq:2
+                        return `${direction}：${route}(seq:${seqDisplay})(${eta.dest_tc}): ${nearestStop.name} ${timeStr} (${diff > 0 ? diff : '即將到達'} 分鐘)`;
                     });
                 output += etaTimes.length ? etaTimes.join('<br>') : `${route}：暫無到站時間`;
 
