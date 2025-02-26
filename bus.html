@@ -58,7 +58,7 @@
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間v4.6</h1>
+    <h1>查詢巴士最近站點與到站時間v4.7</h1>
     <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 960)">
     <select id="company">
         <option value="">請選擇巴士公司</option>
@@ -70,8 +70,8 @@
     <div id="result"></div>
 
     <script>
+        const CITYBUS_ROUTE_STOP_API = 'https://rt.data.gov.hk/v2/transport/citybus/route-stop/ctb';
         const CITYBUS_STOP_API = 'https://rt.data.gov.hk/v2/transport/citybus/stop';
-        const CITYBUS_ROUTE_API = 'https://rt.data.gov.hk/v2/transport/citybus/route/ctb';
         const CITYBUS_ETA_API = 'https://rt.data.gov.hk/v2/transport/citybus/eta/ctb';
         const KMB_ROUTE_STOP_API = 'https://data.etabus.gov.hk/v1/transport/kmb/route-stop';
         const KMB_STOP_ETA_API = 'https://data.etabus.gov.hk/v1/transport/kmb/stop-eta';
@@ -114,37 +114,35 @@
 
         async function checkCitybusRoute(route, userLat, userLon, result, output) {
             try {
-                // Step 1: 用定位搵最近站點
+                // Step 1: 獲取路線所有站點
+                const routeStopResponse = await fetch(CITYBUS_ROUTE_STOP_API);
+                if (!routeStopResponse.ok) throw new Error(`路線站點資料獲取失敗（狀態碼：${routeStopResponse.status}）`);
+                const routeStopData = await routeStopResponse.json();
+                const routeStops = routeStopData.data.filter(stop => stop.route === route);
+                if (!routeStops.length) throw new Error('路線未找到');
+
+                // Step 2: 獲取站點位置
                 const stopResponse = await fetch(CITYBUS_STOP_API);
                 if (!stopResponse.ok) throw new Error(`站點資料獲取失敗（狀態碼：${stopResponse.status}）`);
                 const stopData = await stopResponse.json();
                 const allStops = stopData.data;
 
-                // Step 2: 配對路線
-                const routeResponse = await fetch(CITYBUS_ROUTE_API);
-                if (!routeResponse.ok) throw new Error(`路線資料獲取失敗（狀態碼：${routeResponse.status}）`);
-                const routeData = await routeResponse.json();
-                const routeInfo = routeData.data.find(r => r.route === route);
-                if (!routeInfo) throw new Error('路線未找到');
-
-                // Step 3: 搵最近站點並分 dir:I 同 dir:O
+                // Step 3: 計算最近站點並分 dir:I 同 dir:O
                 let nearestInbound = null;
                 let nearestOutbound = null;
                 let minDistanceI = Infinity;
                 let minDistanceO = Infinity;
 
-                for (let stop of allStops) {
+                for (let routeStop of routeStops) {
+                    const stop = allStops.find(s => s.stop === routeStop.stop);
+                    if (!stop) continue;
+
                     const stopLat = parseFloat(stop.latitude || 0);
                     const stopLon = parseFloat(stop.longitude || 0);
                     if (isNaN(stopLat) || isNaN(stopLon)) continue;
 
                     const distance = calculateDistance(userLat, userLon, stopLat, stopLon);
-                    const etaResponse = await fetch(`${CITYBUS_ETA_API}/${stop.stop}`);
-                    if (!etaResponse.ok) throw new Error(`ETA 查詢失敗（狀態碼：${etaResponse.status}）`);
-                    const etaData = await etaResponse.json();
-                    const routeEtas = etaData.data.filter(eta => eta.route === route && eta.eta);
-
-                    if (routeEtas.some(eta => eta.dir === 'I') && distance < minDistanceI) {
+                    if (routeStop.dir === 'I' && distance < minDistanceI) {
                         minDistanceI = distance;
                         nearestInbound = {
                             stop: stop.stop,
@@ -154,8 +152,7 @@
                             distance: distance,
                             dir: 'I'
                         };
-                    }
-                    if (routeEtas.some(eta => eta.dir === 'O') && distance < minDistanceO) {
+                    } else if (routeStop.dir === 'O' && distance < minDistanceO) {
                         minDistanceO = distance;
                         nearestOutbound = {
                             stop: stop.stop,
@@ -170,7 +167,7 @@
 
                 if (!nearestInbound || !nearestOutbound) {
                     const fallbackStop = nearestInbound || nearestOutbound;
-                    if (!fallbackStop) throw new Error('無有效站點數據或路線未找到');
+                    if (!fallbackStop) throw new Error('無有效站點數據');
                     nearestInbound = nearestInbound || fallbackStop;
                     nearestOutbound = nearestOutbound || fallbackStop;
                 }
