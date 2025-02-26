@@ -58,7 +58,7 @@
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間v4.2</h1>
+    <h1>查詢巴士最近站點與到站時間v4.3</h1>
     <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 960)">
     <select id="company">
         <option value="">請選擇巴士公司</option>
@@ -131,7 +131,7 @@
                     if (isNaN(stopLat) || isNaN(stopLon)) continue;
 
                     const distance = calculateDistance(userLat, userLon, stopLat, stopLon);
-                    const etaResponse = await fetch(`${CITYBUS_ETA_API}/${stop.stopId}`);
+                    const etaResponse = await fetch(`${CITYBUS_ETA_API}/${stop.stop}`);
                     if (!etaResponse.ok) continue;
 
                     const etaData = await etaResponse.json();
@@ -140,7 +140,7 @@
                     if (routeEtas.some(eta => eta.dir === 'I') && distance < minDistanceI) {
                         minDistanceI = distance;
                         nearestInbound = {
-                            stopId: stop.stop,
+                            stop: stop.stop, // 改用 stop 代替 stopId
                             name: stop.name_tc,
                             lat: stopLat,
                             lon: stopLon,
@@ -151,7 +151,7 @@
                     if (routeEtas.some(eta => eta.dir === 'O') && distance < minDistanceO) {
                         minDistanceO = distance;
                         nearestOutbound = {
-                            stopId: stop.stop,
+                            stop: stop.stop, // 改用 stop 代替 stopId
                             name: stop.name_tc,
                             lat: stopLat,
                             lon: stopLon,
@@ -169,11 +169,11 @@
                 }
 
                 // Step 3: 用 stop number 獲取 ETA
-                const etaInboundResponse = await fetch(`${CITYBUS_ETA_API}/${nearestInbound.stopId}`);
+                const etaInboundResponse = await fetch(`${CITYBUS_ETA_API}/${nearestInbound.stop}`);
                 if (!etaInboundResponse.ok) throw new Error(`Inbound ETA 查詢失敗（狀態碼：${etaInboundResponse.status}）`);
                 const etaInboundData = await etaInboundResponse.json();
 
-                const etaOutboundResponse = await fetch(`${CITYBUS_ETA_API}/${nearestOutbound.stopId}`);
+                const etaOutboundResponse = await fetch(`${CITYBUS_ETA_API}/${nearestOutbound.stop}`);
                 if (!etaOutboundResponse.ok) throw new Error(`Outbound ETA 查詢失敗（狀態碼：${etaOutboundResponse.status}）`);
                 const etaOutboundData = await etaOutboundResponse.json();
 
