@@ -44,6 +44,12 @@
             margin-right: auto;
             word-wrap: break-word;
         }
+        .direction-block {
+            margin-bottom: 10px;
+        }
+        .eta-time {
+            margin-left: 20px;
+        }
         @media (max-width: 600px) {
             h1 { font-size: 6vw; }
             input, select, button { font-size: 5vw; }
@@ -52,7 +58,7 @@
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間v3.9</h1>
+    <h1>查詢巴士最近站點與到站時間v4.0</h1>
     <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 960)">
     <select id="company">
         <option value="">請選擇巴士公司</option>
@@ -242,37 +248,37 @@
                     .filter(eta => eta.route === route && eta.dir === 'O' && eta.eta)
                     .slice(0, 3); // 最多三個
 
-                output += nearestInbound.stopId === nearestOutbound.stopId
-                    ? `最近巴士站：${nearestInbound.name}<br>`
-                    : `最近巴士站（去程）：${nearestInbound.name}<br>最近巴士站（回程）：${nearestOutbound.name}<br>`;
-
-                // Inbound (去程)
-                if (inboundEtas.length) {
-                    const inboundTimes = inboundEtas.map(eta => {
-                        const etaTime = new Date(eta.eta);
-                        const now = new Date();
-                        const diff = Math.round((etaTime - now) / 60000);
-                        const timeStr = etaTime.toLocaleTimeString('zh-HK', { hour12: false });
-                        return `${timeStr} (${diff > 0 ? diff : '即將到達'} 分鐘)`;
-                    }).join(', ');
-                    output += `去：${route}(bound:I)(${inboundEtas[0].dest_tc}): ${nearestInbound.name} ${inboundTimes}<br>`;
-                } else {
-                    output += `去：${route}(bound:I)(未知目的地): ${nearestInbound.name} 暫無到站時間<br>`;
-                }
-
-                // Outbound (回程)
+                // Inbound (去程，bound:O)
+                output += `<div class="direction-block">最近巴士站：${nearestOutbound.name}<br>`;
+                output += `去：${route}(bound:O)(${outboundEtas[0]?.dest_tc || '未知目的地'}):<br>`;
                 if (outboundEtas.length) {
-                    const outboundTimes = outboundEtas.map(eta => {
+                    outboundEtas.forEach(eta => {
                         const etaTime = new Date(eta.eta);
                         const now = new Date();
                         const diff = Math.round((etaTime - now) / 60000);
                         const timeStr = etaTime.toLocaleTimeString('zh-HK', { hour12: false });
-                        return `${timeStr} (${diff > 0 ? diff : '即將到達'} 分鐘)`;
-                    }).join(', ');
-                    output += `回：${route}(bound:O)(${outboundEtas[0].dest_tc}): ${nearestOutbound.name} ${outboundTimes}<br>`;
+                        output += `<div class="eta-time">${timeStr} (${diff > 0 ? diff : '即將到達'} 分鐘)</div>`;
+                    });
                 } else {
-                    output += `回：${route}(bound:O)(未知目的地): ${nearestOutbound.name} 暫無到站時間<br>`;
+                    output += `<div class="eta-time">暫無到站時間</div>`;
                 }
+                output += `</div>`;
+
+                // Outbound (回程，bound:I)
+                output += `<div class="direction-block">最近巴士站：${nearestInbound.name}<br>`;
+                output += `回：${route}(bound:I)(${inboundEtas[0]?.dest_tc || '未知目的地'}):<br>`;
+                if (inboundEtas.length) {
+                    inboundEtas.forEach(eta => {
+                        const etaTime = new Date(eta.eta);
+                        const now = new Date();
+                        const diff = Math.round((etaTime - now) / 60000);
+                        const timeStr = etaTime.toLocaleTimeString('zh-HK', { hour12: false });
+                        output += `<div class="eta-time">${timeStr} (${diff > 0 ? diff : '即將到達'} 分鐘)</div>`;
+                    });
+                } else {
+                    output += `<div class="eta-time">暫無到站時間</div>`;
+                }
+                output += `</div>`;
 
                 result.innerHTML = output;
             } catch (error) {
