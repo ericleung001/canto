@@ -10,11 +10,13 @@
             text-align: center;
             margin: 0;
             padding: 10px;
-            background-color: #f5f5f5;
+            background-color: black; /* 黑色背景 */
+            color: white; /* 白色字體 */
         }
         h1 {
             font-size: 5vw;
             margin-bottom: 20px;
+            color: white; /* 白色標題 */
         }
         select, button {
             margin: 10px 0;
@@ -23,16 +25,23 @@
             width: 80%;
             max-width: 300px;
             box-sizing: border-box;
+            background-color: #333; /* 深灰色背景 */
+            color: white; /* 白色字體 */
+            border: 1px solid #555; /* 灰色邊框 */
+        }
+        select option {
+            background-color: #333; /* 下拉選項深灰色背景 */
+            color: white; /* 白色字體 */
         }
         button {
-            background-color: #007bff;
+            background-color: #007bff; /* 保持藍色按鈕 */
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
         }
         button:hover {
-            background-color: #0056b3;
+            background-color: #0056b3; /* 懸停時深藍色 */
         }
         #result {
             margin-top: 20px;
@@ -43,10 +52,11 @@
             margin-left: auto;
             margin-right: auto;
             word-wrap: break-word;
+            color: white; /* 白色字體 */
         }
         .company-block {
             margin-bottom: 20px;
-            border-bottom: 1px solid #ccc;
+            border-bottom: 1px solid #555; /* 灰色分隔線 */
             padding-bottom: 10px;
         }
         .direction-block {
@@ -63,10 +73,10 @@
     </style>
 </head>
 <body onload="initializePage()">
-    <h1>查詢巴士最近站點與到站時間 test18</h1>
+    <h1>查詢巴士最近站點與到站時間v0.4</h1>
     <div id="location">定位座標：載入中...</div>
     <select id="route">
-        <option value="">請選擇附近巴士路線v0.3</option>
+        <option value="">請選擇附近巴士路線</option>
     </select>
     <button onclick="getBusTime()">查詢</button>
     <div id="result"></div>
@@ -99,7 +109,6 @@
             }
         }
 
-        // 檢查是否夜晚時段 (00:00 - 05:30)
         function isNightTime() {
             const now = new Date();
             const hours = now.getHours();
@@ -110,7 +119,6 @@
             return timeInMinutes >= nightStart && timeInMinutes < nightEnd;
         }
 
-        // 檢查是否白天時段 (05:00 - 02:00 次日)
         function isDayTime() {
             const now = new Date();
             const hours = now.getHours();
@@ -128,7 +136,6 @@
             let nearbyRoutes = new Set();
             const isNight = isNightTime();
 
-            // 查詢九巴路線
             try {
                 const kmbRoutes = await fetchKmbRoutes(userLat, userLon);
                 kmbRoutes.forEach(route => {
@@ -144,7 +151,6 @@
                 console.log(`獲取九巴路線失敗：${error.message}`);
             }
 
-            // 查詢城巴路線
             try {
                 const ctbRoutes = await fetchCtbRoutes(userLat, userLon);
                 ctbRoutes.forEach(route => {
@@ -160,12 +166,10 @@
                 console.log(`獲取城巴路線失敗：${error.message}`);
             }
 
-            // 按 1 到 Z 排序
             const sortedRoutes = Array.from(nearbyRoutes).sort((a, b) => {
                 return a.localeCompare(b, 'en', { numeric: true });
             });
 
-            // 填充下拉選單
             sortedRoutes.forEach(route => {
                 const option = document.createElement("option");
                 option.value = route;
@@ -190,7 +194,7 @@
                 const stopLon = parseFloat(stop.long || 0);
                 if (isNaN(stopLat) || isNaN(stopLon)) return false;
                 const distance = calculateDistance(userLat, userLon, stopLat, stopLon);
-                return distance < 1; // 1 公里範圍
+                return distance < 1;
             });
 
             const nearbyRoutes = new Set();
@@ -204,7 +208,7 @@
 
         async function fetchCtbRoutes(userLat, userLon) {
             const nearbyRoutes = new Set();
-            const commonRoutes = ['1', '5B', '50M', '960', 'N1', 'NA50M']; // 包括夜班路線
+            const commonRoutes = ['1', '5B', '50M', '960', 'N1', 'NA50M'];
 
             for (let route of commonRoutes) {
                 try {
