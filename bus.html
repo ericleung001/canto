@@ -63,7 +63,7 @@
     </style>
 </head>
 <body onload="initializePage()">
-    <h1>查詢巴士最近站點與到站時間v0.1</h1>
+    <h1>查詢巴士最近站點與到站時間v0.2</h1>
     <div id="location">定位座標：載入中...</div>
     <select id="route">
         <option value="">請選擇附近巴士路線</option>
@@ -99,27 +99,53 @@
             }
         }
 
+        // 檢查是否夜晚時段 (00:00 - 05:59)
+        function isNightTime() {
+            const now = new Date();
+            const hours = now.getHours();
+            return hours >= 0 && hours < 6; // 00:00 - 05:59
+        }
+
         async function populateRouteOptions() {
             const routeSelect = document.getElementById("route");
             routeSelect.innerHTML = '<option value="">請選擇附近巴士路線</option>';
 
             let nearbyRoutes = new Set();
+            const isNight = isNightTime();
 
+            // 查詢九巴路線
             try {
                 const kmbRoutes = await fetchKmbRoutes(userLat, userLon);
-                kmbRoutes.forEach(route => nearbyRoutes.add(route));
+                kmbRoutes.forEach(route => {
+                    if (isNight) {
+                        if (route.startsWith('N') || route.startsWith('NA')) {
+                            nearbyRoutes.add(route);
+                        }
+                    } else {
+                        nearbyRoutes.add(route);
+                    }
+                });
             } catch (error) {
                 console.log(`獲取九巴路線失敗：${error.message}`);
             }
 
+            // 查詢城巴路線
             try {
                 const ctbRoutes = await fetchCtbRoutes(userLat, userLon);
-                ctbRoutes.forEach(route => nearbyRoutes.add(route));
+                ctbRoutes.forEach(route => {
+                    if (isNight) {
+                        if (route.startsWith('N') || route.startsWith('NA')) {
+                            nearbyRoutes.add(route);
+                        }
+                    } else {
+                        nearbyRoutes.add(route);
+                    }
+                });
             } catch (error) {
                 console.log(`獲取城巴路線失敗：${error.message}`);
             }
 
-            // 轉為陣列並按自然排序（1 到 Z）
+            // 按 1 到 Z 排序
             const sortedRoutes = Array.from(nearbyRoutes).sort((a, b) => {
                 return a.localeCompare(b, 'en', { numeric: true });
             });
@@ -163,7 +189,7 @@
 
         async function fetchCtbRoutes(userLat, userLon) {
             const nearbyRoutes = new Set();
-            const commonRoutes = ['1', '5B', '50M', '960']; // 可擴展路線列表
+            const commonRoutes = ['1', '5B', '50M', '960', 'N1', 'NA50M']; // 包括夜班路線
 
             for (let route of commonRoutes) {
                 try {
