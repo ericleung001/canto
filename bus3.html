@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>巴士最近站點與到站時間</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/jsLKmRVoG4gOQ/iYg=" crossorigin=""/>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -50,15 +52,22 @@
         .eta-time {
             margin-left: 20px;
         }
+        #map {
+            height: 300px;
+            width: 90%;
+            margin: 20px auto;
+            border: 1px solid #ccc;
+        }
         @media (max-width: 600px) {
             h1 { font-size: 6vw; }
             input, select, button { font-size: 5vw; }
             #result { font-size: 5vw; }
+            #map { height: 200px; }
         }
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間14</h1>
+    <h1>查詢巴士最近站點與到站時間+map</h1>
     <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 960)">
     <select id="company">
         <option value="">請選擇巴士公司</option>
@@ -68,7 +77,10 @@
     </select>
     <button onclick="getBusTime()">查詢</button>
     <div id="result"></div>
+    <div id="map"></div>
 
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
         const CITYBUS_BASE_URL = 'https://rt.data.gov.hk/v2/transport/citybus';
         const KMB_ROUTE_STOP_API = 'https://data.etabus.gov.hk/v1/transport/kmb/route-stop';
@@ -83,6 +95,67 @@
         let lastNearestOutbound = null;
         let userLat = null;
         let userLon = null;
+        let map = null;
+
+        // 初始化地圖
+        function initializeMap() {
+            if (!map) {
+                map = L.map('map').setView([22.4032, 113.9678], 15); // 預設中心點
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(map);
+            }
+        }
+
+        // 更新地圖標記
+        function updateMap(userLat, userLon, inboundStop, outboundStop) {
+            initializeMap();
+            map.eachLayer(layer => {
+                if (layer instanceof L.Marker) {
+                    map.removeLayer(layer);
+                }
+            });
+
+            // 用戶定位（藍色標記）
+            if (userLat && userLon) {
+                L.marker([userLat, userLon], {
+                    icon: L.icon({
+                        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41]
+                    })
+                }).addTo(map).bindPopup('您的位置');
+            }
+
+            // Inbound 巴士站（綠色標記）
+            if (inboundStop && inboundStop.lat && inboundStop.lon) {
+                L.marker([inboundStop.lat, inboundStop.lon], {
+                    icon: L.icon({
+                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41]
+                    })
+                }).addTo(map).bindPopup(`Inbound: ${inboundStop.name}`);
+            }
+
+            // Outbound 巴士站（紅色標記）
+            if (outboundStop && outboundStop.lat && outboundStop.lon) {
+                L.marker([outboundStop.lat, outboundStop.lon], {
+                    icon: L.icon({
+                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41]
+                    })
+                }).addTo(map).bindPopup(`Outbound: ${outboundStop.name}`);
+            }
+
+            // 調整地圖視野包含所有標記
+            const bounds = [];
+            if (userLat && userLon) bounds.push([userLat, userLon]);
+            if (inboundStop && inboundStop.lat && inboundStop.lon) bounds.push([inboundStop.lat, inboundStop.lon]);
+            if (outboundStop && outboundStop.lat && outboundStop.lon) bounds.push([outboundStop.lat, outboundStop.lon]);
+            if (bounds.length > 0) map.fitBounds(bounds, { padding: [50, 50] });
+        }
 
         async function getBusTime() {
             let route = document.getElementById("route").value.trim().toUpperCase();
@@ -138,7 +211,7 @@
                     output = await checkCitybusRoute(lastRoute, userLat, userLon, result, output, true);
                 } else if (lastCompany === 'kmb') {
                     output = await checkKmbRoute(lastRoute, userLat, userLon, result, output, true);
-                } else if (company === 'mtrbus') {
+                } else if (lastCompany === 'mtrbus') {
                     output = await checkMtrBusRoute(lastRoute, userLat, userLon, result, output, true);
                 }
             } catch (error) {
@@ -191,13 +264,11 @@
                                 continue;
                             }
 
-                            // 適應 lat/long 欄位名稱
                             const stopLat = stopDetail.latitude ? parseFloat(stopDetail.latitude) : (stopDetail.lat ? parseFloat(stopDetail.lat) : null);
                             const stopLon = stopDetail.longitude ? parseFloat(stopDetail.longitude) : (stopDetail.long ? parseFloat(stopDetail.long) : null);
 
                             if (isNaN(stopLat) || isNaN(stopLon) || stopLat === null || stopLon === null) {
                                 console.log(`站點 ${stop.stop} 無有效經緯度數據 (lat: ${stopDetail.lat || stopDetail.latitude}, lon: ${stopDetail.long || stopDetail.longitude})`);
-                                // 若無經緯度，仍保留站點作為候選
                                 if (!nearestInboundCandidate) {
                                     nearestInboundCandidate = {
                                         stop: stop.stop,
@@ -249,13 +320,11 @@
                                 continue;
                             }
 
-                            // 適應 lat/long 欄位名稱
                             const stopLat = stopDetail.latitude ? parseFloat(stopDetail.latitude) : (stopDetail.lat ? parseFloat(stopDetail.lat) : null);
                             const stopLon = stopDetail.longitude ? parseFloat(stopDetail.longitude) : (stopDetail.long ? parseFloat(stopDetail.long) : null);
 
                             if (isNaN(stopLat) || isNaN(stopLon) || stopLat === null || stopLon === null) {
                                 console.log(`站點 ${stop.stop} 無有效經緯度數據 (lat: ${stopDetail.lat || stopDetail.latitude}, lon: ${stopDetail.long || stopDetail.longitude})`);
-                                // 若無經緯度，仍保留站點作為候選
                                 if (!nearestOutboundCandidate) {
                                     nearestOutboundCandidate = {
                                         stop: stop.stop,
@@ -349,6 +418,9 @@
                     output += `<div class="eta-time">暫無到站時間</div>`;
                 }
                 output += `</div>`;
+
+                // 更新地圖
+                updateMap(userLat, userLon, lastNearestInbound, lastNearestOutbound);
 
                 result.innerHTML = output;
                 return output;
@@ -460,6 +532,9 @@
                 }
                 output += `</div>`;
 
+                // 更新地圖
+                updateMap(userLat, userLon, lastNearestInbound, lastNearestOutbound);
+
                 result.innerHTML = output;
                 return output;
             } catch (error) {
@@ -519,6 +594,10 @@
                 output += `</div>`;
 
                 output += '<br>備註：港鐵巴士無公開站點位置 API，距離無法計算。';
+                
+                // 更新地圖 (MTR 巴士無經緯度，僅顯示用戶位置)
+                updateMap(userLat, userLon, null, null);
+
                 result.innerHTML = output;
                 return output;
             } catch (error) {
