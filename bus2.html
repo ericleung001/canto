@@ -58,7 +58,7 @@
   </style>
 </head>
 <body>
-  <h1>查詢巴士最近站點與到站時間 v5.03</h1>
+  <h1>查詢巴士最近站點與到站時間 v5.04</h1>
   <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 960)">
   <select id="company">
     <option value="">請選擇巴士公司</option>
@@ -70,11 +70,10 @@
   <div id="result"></div>
 
   <script>
-    // 注意：根據 PDF，城巴 API 不支援用 query parameter 篩選路線，
-    // 所以我哋採用直接攞全量資料再過濾嘅方法。
+    // 注意：城巴 route‑stop API 只支援攞全量資料，唔支援 query parameter
     const CITYBUS_ROUTE_STOP_API = 'https://rt.data.gov.hk/v2/transport/citybus/route-stop/ctb/1';
     const CITYBUS_STOP_API = 'https://rt.data.gov.hk/v2/transport/citybus/stop';
-    // ETA API 呼叫時仍需加上 "/1" 參數
+    // ETA API 呼叫時需加上 "/1"
     const CITYBUS_ETA_API = 'https://rt.data.gov.hk/v2/transport/citybus/eta/ctb';
     const KMB_ROUTE_STOP_API = 'https://data.etabus.gov.hk/v1/transport/kmb/route-stop';
     const KMB_STOP_ETA_API = 'https://data.etabus.gov.hk/v1/transport/kmb/stop-eta';
@@ -154,11 +153,11 @@
     async function checkCitybusRoute(route, userLat, userLon, result, output, updateOnly = false) {
       try {
         if (!updateOnly) {
-          // 直接呼叫完整資料（無 query parameter）
+          // 攞取全量資料，再喺前端用 filter 篩選指定路線嘅資料
           const routeStopResponse = await fetch(CITYBUS_ROUTE_STOP_API);
           if (!routeStopResponse.ok) throw new Error(`路線站點資料獲取失敗（狀態碼：${routeStopResponse.status}）`);
           const routeStopData = await routeStopResponse.json();
-          // 過濾出符合指定路線嘅站點
+          // 過濾出符合指定路線嘅站點資料
           const routeStops = routeStopData.data.filter(item => item.route === route);
           if (!routeStops.length) throw new Error('路線未找到');
 
@@ -168,7 +167,7 @@
           const allStops = stopData.data;
 
           let minDistance = Infinity;
-          // 循環過濾出最近嘅站點（Inbound 與 Outbound 用相同站點）
+          // 由全量資料中，揀出最近嘅站點（Inbound 與 Outbound 均用同一個站點）
           for (let item of routeStops) {
             const stopInfo = allStops.find(s => s.stop === item.stop);
             if (!stopInfo) continue;
