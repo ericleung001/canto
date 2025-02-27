@@ -58,7 +58,7 @@
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間8</h1>
+    <h1>查詢巴士最近站點與到站時間10</h1>
     <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 960)">
     <select id="company">
         <option value="">請選擇巴士公司</option>
@@ -149,20 +149,20 @@
         async function checkCitybusRoute(route, userLat, userLon, result, output, updateOnly = false) {
             try {
                 if (!updateOnly) {
-                    // Step 1: 獲取指定路線嘅站點（Inbound 同 Outbound）
-                    const inboundResponse = await fetch(`https://rt.data.gov.hk/v2/transport/citybus/route-stop/CTB/${route}/inbound`);
+                    // Step 1: 獲取路線所有巴士站（Inbound 同 Outbound）
+                    const inboundResponse = await fetch(`${CITYBUS_BASE_URL}/route-stop/CTB/${route}/inbound`);
                     if (!inboundResponse.ok) throw new Error(`Inbound 路線站點資料獲取失敗（狀態碼：${inboundResponse.status}）`);
                     const inboundData = await inboundResponse.json();
                     const inboundStops = inboundData.data || [];
 
-                    const outboundResponse = await fetch(`https://rt.data.gov.hk/v2/transport/citybus/route-stop/CTB/${route}/outbound`);
+                    const outboundResponse = await fetch(`${CITYBUS_BASE_URL}/route-stop/CTB/${route}/outbound`);
                     if (!outboundResponse.ok) throw new Error(`Outbound 路線站點資料獲取失敗（狀態碼：${outboundResponse.status}）`);
                     const outboundData = await outboundResponse.json();
                     const outboundStops = outboundData.data || [];
 
                     if (!inboundStops.length && !outboundStops.length) throw new Error('路線未找到');
 
-                    // Step 2: 獲取站點位置並計算最近站點
+                    // Step 2: 用定位搵最近站點
                     let minDistanceI = Infinity;
                     let minDistanceO = Infinity;
                     let nearestInboundCandidate = null;
@@ -170,8 +170,8 @@
 
                     // Inbound 站點
                     for (let stop of inboundStops) {
-                        const stopResponse = await fetch(`https://rt.data.gov.hk/v2/transport/citybus/stop/${stop.stop}`);
-                        if (!stopResponse.ok) continue; // 跳過無效站點
+                        const stopResponse = await fetch(`${CITYBUS_BASE_URL}/stop/${stop.stop}`);
+                        if (!stopResponse.ok) continue;
                         const stopData = await stopResponse.json();
                         const stopDetail = stopData.data;
 
@@ -195,8 +195,8 @@
 
                     // Outbound 站點
                     for (let stop of outboundStops) {
-                        const stopResponse = await fetch(`https://rt.data.gov.hk/v2/transport/citybus/stop/${stop.stop}`);
-                        if (!stopResponse.ok) continue; // 跳過無效站點
+                        const stopResponse = await fetch(`${CITYBUS_BASE_URL}/stop/${stop.stop}`);
+                        if (!stopResponse.ok) continue;
                         const stopData = await stopResponse.json();
                         const stopDetail = stopData.data;
 
@@ -218,7 +218,7 @@
                         }
                     }
 
-                    // 確保最近站點唔會跳去總站
+                    // 確認最近站點
                     if (!nearestInboundCandidate || !nearestOutboundCandidate) {
                         const fallbackStop = nearestInboundCandidate || nearestOutboundCandidate;
                         if (!fallbackStop) throw new Error('無有效站點數據');
@@ -228,18 +228,14 @@
                         lastNearestInbound = nearestInboundCandidate;
                         lastNearestOutbound = nearestOutboundCandidate;
                     }
-
-                    // 調試距離信息（可選）
-                    console.log(`Inbound 最近站點：${lastNearestInbound.name}, 距離：${minDistanceI} km`);
-                    console.log(`Outbound 最近站點：${lastNearestOutbound.name}, 距離：${minDistanceO} km`);
                 }
 
                 // Step 3: 獲取 ETA
-                const etaInboundResponse = await fetch(`https://rt.data.gov.hk/v2/transport/citybus/eta/CTB/${lastNearestInbound.stop}/${route}`);
+                const etaInboundResponse = await fetch(`${CITYBUS_BASE_URL}/eta/CTB/${lastNearestInbound.stop}/${route}`);
                 if (!etaInboundResponse.ok) throw new Error(`Inbound ETA 查詢失敗（狀態碼：${etaInboundResponse.status}）`);
                 const etaInboundData = await etaInboundResponse.json();
 
-                const etaOutboundResponse = await fetch(`https://rt.data.gov.hk/v2/transport/citybus/eta/CTB/${lastNearestOutbound.stop}/${route}`);
+                const etaOutboundResponse = await fetch(`${CITYBUS_BASE_URL}/eta/CTB/${lastNearestOutbound.stop}/${route}`);
                 if (!etaOutboundResponse.ok) throw new Error(`Outbound ETA 查詢失敗（狀態碼：${etaOutboundResponse.status}）`);
                 const etaOutboundData = await etaOutboundResponse.json();
 
