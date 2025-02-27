@@ -58,7 +58,7 @@
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間22</h1>
+    <h1>查詢巴士最近站點與到站時間 test18</h1>
     <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 960)">
     <select id="company">
         <option value="">請選擇巴士公司</option>
@@ -154,13 +154,18 @@
                     if (!inboundResponse.ok) throw new Error(`Inbound 路線站點資料獲取失敗（狀態碼：${inboundResponse.status}）`);
                     const inboundData = await inboundResponse.json();
                     const inboundStops = inboundData.data || [];
+                    console.log(`Inbound 站點數量：${inboundStops.length}`, inboundStops);
 
                     const outboundResponse = await fetch(`${CITYBUS_BASE_URL}/route-stop/CTB/${route}/outbound`);
                     if (!outboundResponse.ok) throw new Error(`Outbound 路線站點資料獲取失敗（狀態碼：${outboundResponse.status}）`);
                     const outboundData = await outboundResponse.json();
                     const outboundStops = outboundData.data || [];
+                    console.log(`Outbound 站點數量：${outboundStops.length}`, outboundStops);
 
-                    if (!inboundStops.length && !outboundStops.length) throw new Error('路線未找到');
+                    if (!inboundStops.length && !outboundStops.length) {
+                        console.log(`路線 ${route} 未找到任何站點`);
+                        throw new Error('路線未找到');
+                    }
 
                     // Step 2: 用定位搵最近站點
                     let minDistanceI = Infinity;
@@ -179,15 +184,29 @@
                             const stopData = await stopResponse.json();
                             const stopDetail = stopData.data;
 
-                            if (!stopDetail || !stopDetail.latitude || !stopDetail.longitude) {
-                                console.log(`站點 ${stop.stop} 無有效經緯度數據`);
+                            console.log(`Inbound 站點 ${stop.stop} 原始數據：`, stopDetail);
+
+                            if (!stopDetail) {
+                                console.log(`站點 ${stop.stop} 無有效數據`);
                                 continue;
                             }
 
-                            const stopLat = parseFloat(stopDetail.latitude);
-                            const stopLon = parseFloat(stopDetail.longitude);
-                            if (isNaN(stopLat) || isNaN(stopLon)) {
-                                console.log(`站點 ${stop.stop} 經緯度無效`);
+                            const stopLat = stopDetail.latitude ? parseFloat(stopDetail.latitude) : null;
+                            const stopLon = stopDetail.longitude ? parseFloat(stopDetail.longitude) : null;
+
+                            if (isNaN(stopLat) || isNaN(stopLon) || stopLat === null || stopLon === null) {
+                                console.log(`站點 ${stop.stop} 無有效經緯度數據 (lat: ${stopDetail.latitude}, lon: ${stopDetail.longitude})`);
+                                // 若無經緯度，仍保留站點作為候選，但距離設為無窮大
+                                if (!nearestInboundCandidate) {
+                                    nearestInboundCandidate = {
+                                        stop: stop.stop,
+                                        name: stopDetail.name_tc || '未知站名',
+                                        lat: null,
+                                        lon: null,
+                                        distance: Infinity,
+                                        dir: 'I'
+                                    };
+                                }
                                 continue;
                             }
 
@@ -222,15 +241,29 @@
                             const stopData = await stopResponse.json();
                             const stopDetail = stopData.data;
 
-                            if (!stopDetail || !stopDetail.latitude || !stopDetail.longitude) {
-                                console.log(`站點 ${stop.stop} 無有效經緯度數據`);
+                            console.log(`Outbound 站點 ${stop.stop} 原始數據：`, stopDetail);
+
+                            if (!stopDetail) {
+                                console.log(`站點 ${stop.stop} 無有效數據`);
                                 continue;
                             }
 
-                            const stopLat = parseFloat(stopDetail.latitude);
-                            const stopLon = parseFloat(stopDetail.longitude);
-                            if (isNaN(stopLat) || isNaN(stopLon)) {
-                                console.log(`站點 ${stop.stop} 經緯度無效`);
+                            const stopLat = stopDetail.latitude ? parseFloat(stopDetail.latitude) : null;
+                            const stopLon = stopDetail.longitude ? parseFloat(stopDetail.longitude) : null;
+
+                            if (isNaN(stopLat) || isNaN(stopLon) || stopLat === null || stopLon === null) {
+                                console.log(`站點 ${stop.stop} 無有效經緯度數據 (lat: ${stopDetail.latitude}, lon: ${stopDetail.longitude})`);
+                                // 若無經緯度，仍保留站點作為候選，但距離設為無窮大
+                                if (!nearestOutboundCandidate) {
+                                    nearestOutboundCandidate = {
+                                        stop: stop.stop,
+                                        name: stopDetail.name_tc || '未知站名',
+                                        lat: null,
+                                        lon: null,
+                                        distance: Infinity,
+                                        dir: 'O'
+                                    };
+                                }
                                 continue;
                             }
 
@@ -256,6 +289,7 @@
 
                     // 確認最近站點
                     if (!nearestInboundCandidate && !nearestOutboundCandidate) {
+                        console.log(`路線 ${route} 無任何有效站點數據可用`);
                         throw new Error('無任何有效站點數據可用');
                     }
 
@@ -264,8 +298,8 @@
                     if (lastNearestInbound) lastNearestInbound.dir = 'I';
                     if (lastNearestOutbound) lastNearestOutbound.dir = 'O';
 
-                    console.log(`最終 Inbound 最近站點：${lastNearestInbound.name}, 距離：${minDistanceI.toFixed(2)} km`);
-                    console.log(`最終 Outbound 最近站點：${lastNearestOutbound.name}, 距離：${minDistanceO.toFixed(2)} km`);
+                    console.log(`最終 Inbound 最近站點：${lastNearestInbound.name}, 距離：${minDistanceI === Infinity ? '未知' : minDistanceI.toFixed(2)} km`);
+                    console.log(`最終 Outbound 最近站點：${lastNearestOutbound.name}, 距離：${minDistanceO === Infinity ? '未知' : minDistanceO.toFixed(2)} km`);
                 }
 
                 // Step 3: 獲取 ETA
