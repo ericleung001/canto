@@ -63,7 +63,7 @@
     </style>
 </head>
 <body onload="initializePage()">
-    <h1>查詢巴士最近站點與到站時間</h1>
+    <h1>查詢巴士最近站點與到站時間v0.1</h1>
     <div id="location">定位座標：載入中...</div>
     <select id="route">
         <option value="">請選擇附近巴士路線</option>
@@ -87,7 +87,6 @@
         let userLat = null;
         let userLon = null;
 
-        // 頁面初始化時獲取定位並填充路線
         async function initializePage() {
             try {
                 const position = await getUserLocation();
@@ -100,14 +99,12 @@
             }
         }
 
-        // 填充附近巴士路線到下拉選單
         async function populateRouteOptions() {
             const routeSelect = document.getElementById("route");
             routeSelect.innerHTML = '<option value="">請選擇附近巴士路線</option>';
 
             let nearbyRoutes = new Set();
 
-            // 查詢九巴路線
             try {
                 const kmbRoutes = await fetchKmbRoutes(userLat, userLon);
                 kmbRoutes.forEach(route => nearbyRoutes.add(route));
@@ -115,7 +112,6 @@
                 console.log(`獲取九巴路線失敗：${error.message}`);
             }
 
-            // 查詢城巴路線
             try {
                 const ctbRoutes = await fetchCtbRoutes(userLat, userLon);
                 ctbRoutes.forEach(route => nearbyRoutes.add(route));
@@ -123,8 +119,13 @@
                 console.log(`獲取城巴路線失敗：${error.message}`);
             }
 
+            // 轉為陣列並按自然排序（1 到 Z）
+            const sortedRoutes = Array.from(nearbyRoutes).sort((a, b) => {
+                return a.localeCompare(b, 'en', { numeric: true });
+            });
+
             // 填充下拉選單
-            nearbyRoutes.forEach(route => {
+            sortedRoutes.forEach(route => {
                 const option = document.createElement("option");
                 option.value = route;
                 option.text = route;
@@ -143,7 +144,6 @@
             const routeStopData = await routeStopResponse.json();
             const routeStops = routeStopData.data;
 
-            // 找出附近 1 公里內嘅站點
             const nearbyStops = allStops.filter(stop => {
                 const stopLat = parseFloat(stop.lat || 0);
                 const stopLon = parseFloat(stop.long || 0);
@@ -152,7 +152,6 @@
                 return distance < 1; // 1 公里範圍
             });
 
-            // 提取附近站點嘅路線
             const nearbyRoutes = new Set();
             nearbyStops.forEach(stop => {
                 const routesAtStop = routeStops.filter(rs => rs.stop === stop.stop);
@@ -163,11 +162,9 @@
         }
 
         async function fetchCtbRoutes(userLat, userLon) {
-            // 城巴無單一 API 獲取所有路線站點，逐一查詢附近站點
             const nearbyRoutes = new Set();
-
-            // 假設已知部分 CTB 路線範圍，這裡模擬查詢常見路線
             const commonRoutes = ['1', '5B', '50M', '960']; // 可擴展路線列表
+
             for (let route of commonRoutes) {
                 try {
                     const inboundResponse = await fetch(`${CITYBUS_BASE_URL}/route-stop/CTB/${route}/inbound`);
@@ -195,9 +192,9 @@
                         if (isNaN(stopLat) || isNaN(stopLon) || stopLat === null || stopLon === null) continue;
 
                         const distance = calculateDistance(userLat, userLon, stopLat, stopLon);
-                        if (distance < 1) { // 1 公里範圍
+                        if (distance < 1) {
                             nearbyRoutes.add(route);
-                            break; // 找到一個附近站點即可
+                            break;
                         }
                     }
                 } catch (err) {
@@ -291,7 +288,7 @@
                     const inboundStops = inboundData.data || [];
 
                     const outboundResponse = await fetch(`${CITYBUS_BASE_URL}/route-stop/CTB/${route}/outbound`);
-                    if (!outboundResponse.ok) throw new Error(`Outbound 路線站點資料獲取失敗（狀態碼：${outboundResponse.status}）`);
+                    if (!outboundResponse.ok) throw new Error(`Outbound 路線站點資料獲取失敗（狀態碼：${inboundResponse.status}）`);
                     const outboundData = await outboundResponse.json();
                     const outboundStops = outboundData.data || [];
 
