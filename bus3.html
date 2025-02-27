@@ -53,8 +53,9 @@
             margin-left: 20px;
         }
         #map {
-            height: 300px;
+            height: 200px; /* 縮減高度 */
             width: 90%;
+            max-width: 600px; /* 限制最大寬度 */
             margin: 20px auto;
             border: 1px solid #ccc;
         }
@@ -62,12 +63,12 @@
             h1 { font-size: 6vw; }
             input, select, button { font-size: 5vw; }
             #result { font-size: 5vw; }
-            #map { height: 200px; }
+            #map { height: 150px; } /* 手機版更小 */
         }
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間+map</h1>
+    <h1>查詢巴士最近站點與到站時間+map v1.1</h1>
     <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 960)">
     <select id="company">
         <option value="">請選擇巴士公司</option>
@@ -100,9 +101,9 @@
         // 初始化地圖
         function initializeMap() {
             if (!map) {
-                map = L.map('map').setView([22.4032, 113.9678], 15); // 預設中心點
+                map = L.map('map').setView([22.4032, 113.9678], 13); // 縮減初始縮放級別
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 }).addTo(map);
             }
         }
@@ -116,8 +117,10 @@
                 }
             });
 
+            const bounds = [];
+
             // 用戶定位（藍色標記）
-            if (userLat && userLon) {
+            if (userLat && userLon && !isNaN(userLat) && !isNaN(userLon)) {
                 L.marker([userLat, userLon], {
                     icon: L.icon({
                         iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -125,10 +128,11 @@
                         iconAnchor: [12, 41]
                     })
                 }).addTo(map).bindPopup('您的位置');
+                bounds.push([userLat, userLon]);
             }
 
             // Inbound 巴士站（綠色標記）
-            if (inboundStop && inboundStop.lat && inboundStop.lon) {
+            if (inboundStop && inboundStop.lat && inboundStop.lon && !isNaN(inboundStop.lat) && !isNaN(inboundStop.lon)) {
                 L.marker([inboundStop.lat, inboundStop.lon], {
                     icon: L.icon({
                         iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
@@ -136,10 +140,11 @@
                         iconAnchor: [12, 41]
                     })
                 }).addTo(map).bindPopup(`Inbound: ${inboundStop.name}`);
+                bounds.push([inboundStop.lat, inboundStop.lon]);
             }
 
             // Outbound 巴士站（紅色標記）
-            if (outboundStop && outboundStop.lat && outboundStop.lon) {
+            if (outboundStop && outboundStop.lat && outboundStop.lon && !isNaN(outboundStop.lat) && !isNaN(outboundStop.lon)) {
                 L.marker([outboundStop.lat, outboundStop.lon], {
                     icon: L.icon({
                         iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
@@ -147,14 +152,15 @@
                         iconAnchor: [12, 41]
                     })
                 }).addTo(map).bindPopup(`Outbound: ${outboundStop.name}`);
+                bounds.push([outboundStop.lat, outboundStop.lon]);
             }
 
-            // 調整地圖視野包含所有標記
-            const bounds = [];
-            if (userLat && userLon) bounds.push([userLat, userLon]);
-            if (inboundStop && inboundStop.lat && inboundStop.lon) bounds.push([inboundStop.lat, inboundStop.lon]);
-            if (outboundStop && outboundStop.lat && outboundStop.lon) bounds.push([outboundStop.lat, outboundStop.lon]);
-            if (bounds.length > 0) map.fitBounds(bounds, { padding: [50, 50] });
+            // 調整地圖視野
+            if (bounds.length > 0) {
+                map.fitBounds(bounds, { padding: [20, 20], maxZoom: 15 }); // 減小邊距並限制最大縮放
+            } else {
+                map.setView([22.4032, 113.9678], 13); // 若無有效坐標，回退預設位置
+            }
         }
 
         async function getBusTime() {
@@ -563,7 +569,7 @@
                         dir: eta.dir === 'I' ? '去程' : '回程'
                     }));
 
-                output += `最近巴士站：${stop.stop || '未知站名'}<br>`;
+                output += `<div class="direction-block">最近巴士站：${stop.stop || '未知站名'}<br>`;
                 const inboundEtas = etaTimes.filter(eta => eta.dir === '去程').slice(0, 3);
                 const outboundEtas = etaTimes.filter(eta => eta.dir === '回程').slice(0, 3);
 
