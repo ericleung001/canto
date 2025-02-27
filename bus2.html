@@ -2,244 +2,181 @@
 <html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>巴士最近站點與到站時間</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>巴士到站時間查詢（九巴 & 城巴）</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             text-align: center;
-            margin: 0;
-            padding: 10px;
-            background-color: #f5f5f5;
+            margin: 20px;
         }
-        h1 {
-            font-size: 5vw;
-            margin-bottom: 20px;
+        #loading {
+            display: none;
+            font-size: 18px;
+            color: red;
         }
-        input, select, button {
-            margin: 10px 0;
-            padding: 10px;
-            font-size: 4vw;
-            width: 80%;
-            max-width: 300px;
-            box-sizing: border-box;
-        }
-        button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        #result {
+        .bus-info {
             margin-top: 20px;
-            font-size: 4vw;
-            line-height: 1.5;
-            text-align: left;
-            max-width: 90%;
-            margin-left: auto;
-            margin-right: auto;
-            word-wrap: break-word;
-        }
-        .direction-block {
-            margin-bottom: 10px;
-        }
-        .eta-time {
-            margin-left: 20px;
-        }
-        @media (max-width: 600px) {
-            h1 { font-size: 6vw; }
-            input, select, button { font-size: 5vw; }
-            #result { font-size: 5vw; }
         }
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間3</h1>
-    <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 960)">
-    <select id="company">
-        <option value="">請選擇巴士公司</option>
-        <option value="citybus">城巴</option>
-        <option value="kmb">九巴</option>
-        <option value="mtrbus">港鐵巴士</option>
+    <h2>巴士到站時間查詢（九巴 & 城巴）</h2>
+    <label for="companySelect">選擇巴士公司：</label>
+    <select id="companySelect">
+        <option value="KMB">九巴</option>
+        <option value="CTB">城巴</option>
     </select>
-    <button onclick="getBusTime()">查詢</button>
+    <br><br>
+    <label for="routeInput">巴士路線：</label>
+    <input type="text" id="routeInput" placeholder="例如 234X">
+    <button onclick="searchBus()">查詢</button>
+    <div id="loading">🚍 查詢中...</div>
     <div id="result"></div>
 
     <script>
-        const CITYBUS_ROUTE_STOP_API = 'https://rt.data.gov.hk/v2/transport/citybus/route/ctb';
-        const CITYBUS_STOP_API = 'https://rt.data.gov.hk/v2/transport/citybus/stop';
-        const CITYBUS_ETA_API = 'https://rt.data.gov.hk/v2/transport/citybus/eta/ctb';
+        const API_BASE = "https://rt.data.gov.hk/v1/transport/citybus/";
+        const KMB_ROUTE_STOP_API = "https://data.etabus.gov.hk/v1/transport/kmb/route-stop";
+        const KMB_STOP_API = "https://data.etabus.gov.hk/v1/transport/kmb/stop";
+        const KMB_ETA_API = "https://data.etabus.gov.hk/v1/transport/kmb/eta";
+        const CTB_ETA_API = API_BASE + "eta/";
 
-        async function getBusTime() {
-            let route = document.getElementById("route").value.trim().toUpperCase();
-            let company = document.getElementById("company").value;
-            let result = document.getElementById("result");
-
-            if (!route) {
-                result.innerHTML = '請輸入路線號碼。';
-                return;
-            }
-            if (!company) {
-                result.innerHTML = '請選擇巴士公司。';
-                return;
-            }
-
-            result.innerHTML = '正在獲取定位並查詢...';
-
+        async function fetchData(url) {
             try {
-                const position = await getUserLocation();
-                const userLat = position.coords.latitude;
-                const userLon = position.coords.longitude;
-                let output = `定位座標：(${userLat.toFixed(4)}, ${userLon.toFixed(4)})<br>`;
-
-                if (company === 'citybus') {
-                    await checkCitybusRoute(route, userLat, userLon, result, output);
-                }
+                let response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP 錯誤: ${response.status}`);
+                let data = await response.json();
+                return data;
             } catch (error) {
-                result.innerHTML = `查詢路線 ${route} 時出錯：${error.message}<br>請確保在 HTTPS 環境並允許定位許可。`;
-            }
-        }
-
-        async function checkCitybusRoute(route, userLat, userLon, result, output) {
-            try {
-
-                const stopResponse = await fetch(CITYBUS_STOP_API);
-                if (!stopResponse.ok) throw new Error(`站點資料獲取失敗（狀態碼：${stopResponse.status}）`);
-                const stopData = await stopResponse.json();
-                const allStops = stopData.data;
-
-                const routeStopResponse = await fetch(CITYBUS_ROUTE_STOP_API);
-                if (!routeStopResponse.ok) throw new Error(`路線站點資料獲取失敗（狀態碼：${routeStopResponse.status}）`);
-                const routeStopData = await routeStopResponse.json();
-                const routeStops = routeStopData.data.filter(stop => stop.route === route);
-                if (!routeStops.length) throw new Error('路線未找到');
-
-
-                
-                let nearestInbound = null;
-                let nearestOutbound = null;
-                let minDistanceI = Infinity;
-                let minDistanceO = Infinity;
-
-                for (let routeStop of routeStops) {
-                    const stop = allStops.find(s => s.stop === routeStop.stop);
-                    if (!stop) continue;
-
-                    const stopLat = parseFloat(stop.latitude || 0);
-                    const stopLon = parseFloat(stop.longitude || 0);
-                    if (isNaN(stopLat) || isNaN(stopLon)) continue;
-
-                    const distance = calculateDistance(userLat, userLon, stopLat, stopLon);
-                    if (routeStop.dir === 'I' && distance < minDistanceI) {
-                        minDistanceI = distance;
-                        nearestInbound = {
-                            stop: stop.stop,
-                            name: stop.name_tc,
-                            lat: stopLat,
-                            lon: stopLon,
-                            distance: distance,
-                            dir: 'I'
-                        };
-                    } else if (routeStop.dir === 'O' && distance < minDistanceO) {
-                        minDistanceO = distance;
-                        nearestOutbound = {
-                            stop: stop.stop,
-                            name: stop.name_tc,
-                            lat: stopLat,
-                            lon: stopLon,
-                            distance: distance,
-                            dir: 'O'
-                        };
-                    }
-                }
-
-                if (!nearestInbound || !nearestOutbound) {
-                    const fallbackStop = nearestInbound || nearestOutbound;
-                    if (!fallbackStop) throw new Error('無有效站點數據');
-                    nearestInbound = nearestInbound || fallbackStop;
-                    nearestOutbound = nearestOutbound || fallbackStop;
-                }
-
-                const etaInboundResponse = await fetch(`${CITYBUS_ETA_API}/${nearestInbound.stop}`);
-                if (!etaInboundResponse.ok) throw new Error(`Inbound ETA 查詢失敗（狀態碼：${etaInboundResponse.status}）`);
-                const etaInboundData = await etaInboundResponse.json();
-
-                const etaOutboundResponse = await fetch(`${CITYBUS_ETA_API}/${nearestOutbound.stop}`);
-                if (!etaOutboundResponse.ok) throw new Error(`Outbound ETA 查詢失敗（狀態碼：${etaInboundResponse.status}）`);
-                const etaOutboundData = await etaOutboundResponse.json();
-
-                const inboundEtas = etaInboundData.data
-                    .filter(eta => eta.route === route && eta.dir === 'I' && eta.eta)
-                    .slice(0, 3);
-                const outboundEtas = etaOutboundData.data
-                    .filter(eta => eta.route === route && eta.dir === 'O' && eta.eta)
-                    .slice(0, 3);
-
-                output += `<div class="direction-block">最近巴士站：${nearestInbound.name}<br>`;
-                output += `去：${route}(bound:I)(${inboundEtas[0]?.dest_tc || '未知目的地'}):<br>`;
-                if (inboundEtas.length) {
-                    inboundEtas.forEach(eta => {
-                        const etaTime = new Date(eta.eta);
-                        const now = new Date();
-                        const diff = Math.round((etaTime - now) / 60000);
-                        const timeStr = etaTime.toLocaleTimeString('zh-HK', { hour12: false });
-                        output += `<div class="eta-time">${timeStr} (${diff > 0 ? diff : '即將到達'} 分鐘)</div>`;
-                    });
-                } else {
-                    output += `<div class="eta-time">暫無到站時間</div>`;
-                }
-                output += `</div>`;
-
-                output += `<div class="direction-block">最近巴士站：${nearestOutbound.name}<br>`;
-                output += `回：${route}(bound:O)(${outboundEtas[0]?.dest_tc || '未知目的地'}):<br>`;
-                if (outboundEtas.length) {
-                    outboundEtas.forEach(eta => {
-                        const etaTime = new Date(eta.eta);
-                        const now = new Date();
-                        const diff = Math.round((etaTime - now) / 60000);
-                        const timeStr = etaTime.toLocaleTimeString('zh-HK', { hour12: false });
-                        output += `<div class="eta-time">${timeStr} (${diff > 0 ? diff : '即將到達'} 分鐘)</div>`;
-                    });
-                } else {
-                    output += `<div class="eta-time">暫無到站時間</div>`;
-                }
-                output += `</div>`;
-
-                result.innerHTML = output;
-            } catch (error) {
-                result.innerHTML = output + `城巴路線 ${route} 查詢失敗：${error.message}<br>備註：請部署到 HTTPS 環境以解決 CORS 問題。`;
+                console.error("API請求錯誤:", error);
+                return null;
             }
         }
 
         function getUserLocation() {
             return new Promise((resolve, reject) => {
                 if (!navigator.geolocation) {
-                    reject(new Error('瀏覽器不支持定位功能'));
-                } else {
-                    navigator.geolocation.getCurrentPosition(resolve, error => {
-                        if (error.code === error.PERMISSION_DENIED) {
-                            reject(new Error('請允許定位許可使用此功能'));
-                        } else {
-                            reject(new Error(`定位失敗：${error.message}`));
-                        }
-                    }, { enableHighAccuracy: true, timeout: 10000 });
+                    reject(new Error("瀏覽器不支援定位功能"));
+                    return;
                 }
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                });
             });
         }
 
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        async function searchBus() {
+            let route = document.getElementById("routeInput").value.trim().toUpperCase();
+            let company = document.getElementById("companySelect").value;
+
+            if (!route) {
+                alert("請輸入巴士路線");
+                return;
+            }
+
+            document.getElementById("loading").style.display = "block";
+            document.getElementById("result").innerHTML = "";
+
+            try {
+                let userLocation = await getUserLocation();
+
+                if (company === "KMB") {
+                    let [routeStops, stopData] = await Promise.all([
+                        fetchData(`${KMB_ROUTE_STOP_API}/${route}/inbound/1`),
+                        fetchData(KMB_STOP_API)
+                    ]);
+
+                    if (!routeStops || !stopData) throw new Error("無法獲取站點資料");
+
+                    let nearestStop = findNearestStop(userLocation, routeStops, stopData);
+
+                    if (!nearestStop) {
+                        document.getElementById("result").innerHTML = "未能找到最近的九巴站點。";
+                        return;
+                    }
+
+                    let etaData = await fetchData(`${KMB_ETA_API}/KMB/${route}/${nearestStop.stop}`);
+                    displayETA(nearestStop, etaData);
+                } else if (company === "CTB") {
+                    let etaData = await fetchData(`${CTB_ETA_API}${route}`);
+
+                    if (!etaData || !etaData.data.length) {
+                        document.getElementById("result").innerHTML = "未能獲取城巴即時到站資訊。";
+                        return;
+                    }
+
+                    displayCTBETA(etaData);
+                }
+            } catch (error) {
+                document.getElementById("result").innerHTML = "查詢失敗：" + error.message;
+                console.error(error);
+            } finally {
+                document.getElementById("loading").style.display = "none";
+            }
+        }
+
+        function findNearestStop(userLocation, routeStops, stopData) {
+            let userLat = userLocation.coords.latitude;
+            let userLng = userLocation.coords.longitude;
+            let minDistance = Infinity;
+            let nearestStop = null;
+
+            routeStops.data.forEach(stop => {
+                let stopInfo = stopData.data.find(s => s.stop === stop.stop);
+                if (!stopInfo) return;
+
+                let distance = getDistance(userLat, userLng, stopInfo.lat, stopInfo.long);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearestStop = stopInfo;
+                }
+            });
+
+            return nearestStop;
+        }
+
+        function getDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371; // 地球半徑 (km)
+            const dLat = (lat2 - lat1) * (Math.PI / 180);
+            const dLng = (lng2 - lng1) * (Math.PI / 180);
+            const a = 
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+                Math.sin(dLng / 2) * Math.sin(dLng / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             return R * c;
+        }
+
+        function displayETA(stopInfo, etaData) {
+            if (!etaData || !etaData.data.length) {
+                document.getElementById("result").innerHTML = `站點：${stopInfo.name_tc} - 無即時到站資訊。`;
+                return;
+            }
+
+            let resultHTML = `<h3>最近站點：${stopInfo.name_tc}</h3>`;
+            resultHTML += `<p>到站時間：</p><ul>`;
+            
+            etaData.data.forEach(bus => {
+                let arrivalTime = new Date(bus.eta);
+                resultHTML += `<li>${arrivalTime.toLocaleTimeString()} (${bus.eta_seq} 號車）</li>`;
+            });
+
+            resultHTML += `</ul>`;
+            document.getElementById("result").innerHTML = resultHTML;
+        }
+
+        function displayCTBETA(etaData) {
+            let resultHTML = `<h3>城巴 ${etaData.data[0].route} 到站資訊</h3><ul>`;
+
+            etaData.data.forEach(bus => {
+                let arrivalTime = new Date(bus.eta);
+                resultHTML += `<li>${bus.dest_tc} - ${arrivalTime.toLocaleTimeString()}</li>`;
+            });
+
+            resultHTML += `</ul>`;
+            document.getElementById("result").innerHTML = resultHTML;
         }
     </script>
 </body>
