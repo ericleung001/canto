@@ -58,7 +58,7 @@
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間6</h1>
+    <h1>查詢巴士最近站點與到站時間8</h1>
     <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 960)">
     <select id="company">
         <option value="">請選擇巴士公司</option>
@@ -165,6 +165,8 @@
                     // Step 2: 獲取站點位置並計算最近站點
                     let minDistanceI = Infinity;
                     let minDistanceO = Infinity;
+                    let nearestInboundCandidate = null;
+                    let nearestOutboundCandidate = null;
 
                     // Inbound 站點
                     for (let stop of inboundStops) {
@@ -173,7 +175,6 @@
                         const stopData = await stopResponse.json();
                         const stopDetail = stopData.data;
 
-                        // 驗證經緯度數據
                         const stopLat = parseFloat(stopDetail.latitude || 0);
                         const stopLon = parseFloat(stopDetail.longitude || 0);
                         if (isNaN(stopLat) || isNaN(stopLon)) continue;
@@ -181,9 +182,9 @@
                         const distance = calculateDistance(userLat, userLon, stopLat, stopLon);
                         if (distance < minDistanceI) {
                             minDistanceI = distance;
-                            lastNearestInbound = {
+                            nearestInboundCandidate = {
                                 stop: stop.stop,
-                                name: stopDetail.name_tc || '未知站名', // 確保站名唔會係 undefined
+                                name: stopDetail.name_tc || '未知站名',
                                 lat: stopLat,
                                 lon: stopLon,
                                 distance: distance,
@@ -199,7 +200,6 @@
                         const stopData = await stopResponse.json();
                         const stopDetail = stopData.data;
 
-                        // 驗證經緯度數據
                         const stopLat = parseFloat(stopDetail.latitude || 0);
                         const stopLon = parseFloat(stopDetail.longitude || 0);
                         if (isNaN(stopLat) || isNaN(stopLon)) continue;
@@ -207,9 +207,9 @@
                         const distance = calculateDistance(userLat, userLon, stopLat, stopLon);
                         if (distance < minDistanceO) {
                             minDistanceO = distance;
-                            lastNearestOutbound = {
+                            nearestOutboundCandidate = {
                                 stop: stop.stop,
-                                name: stopDetail.name_tc || '未知站名', // 確保站名唔會係 undefined
+                                name: stopDetail.name_tc || '未知站名',
                                 lat: stopLat,
                                 lon: stopLon,
                                 distance: distance,
@@ -218,13 +218,20 @@
                         }
                     }
 
-                    // 確保有最近站點，唔會跳去總站
-                    if (!lastNearestInbound || !lastNearestOutbound) {
-                        const fallbackStop = lastNearestInbound || lastNearestOutbound;
+                    // 確保最近站點唔會跳去總站
+                    if (!nearestInboundCandidate || !nearestOutboundCandidate) {
+                        const fallbackStop = nearestInboundCandidate || nearestOutboundCandidate;
                         if (!fallbackStop) throw new Error('無有效站點數據');
-                        lastNearestInbound = lastNearestInbound || { ...fallbackStop, dir: 'I', name: fallbackStop.name || '未知站名' };
-                        lastNearestOutbound = lastNearestOutbound || { ...fallbackStop, dir: 'O', name: fallbackStop.name || '未知站名' };
+                        lastNearestInbound = nearestInboundCandidate || { ...fallbackStop, dir: 'I' };
+                        lastNearestOutbound = nearestOutboundCandidate || { ...fallbackStop, dir: 'O' };
+                    } else {
+                        lastNearestInbound = nearestInboundCandidate;
+                        lastNearestOutbound = nearestOutboundCandidate;
                     }
+
+                    // 調試距離信息（可選）
+                    console.log(`Inbound 最近站點：${lastNearestInbound.name}, 距離：${minDistanceI} km`);
+                    console.log(`Outbound 最近站點：${lastNearestOutbound.name}, 距離：${minDistanceO} km`);
                 }
 
                 // Step 3: 獲取 ETA
