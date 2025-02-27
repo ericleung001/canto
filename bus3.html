@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>巴士最近站點與到站時間v2.1</title>
+    <title>巴士最近站點與到站時間</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -63,7 +63,7 @@
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間v2.1</h1>
+    <h1>查詢巴士最近站點與到站時間 test18</h1>
     <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 960)">
     <button onclick="getBusTime()">查詢</button>
     <div id="result"></div>
@@ -76,6 +76,7 @@
 
         let updateInterval = null;
         let lastRoute = null;
+        let lastCompany = null; // 儲存距離最近嘅公司
         let lastNearestInboundKMB = null;
         let lastNearestOutboundKMB = null;
         let lastNearestInboundCTB = null;
@@ -106,26 +107,32 @@
 
                 lastRoute = route;
 
-                // 先查詢九巴 (KMB)
+                // 查詢九巴 (KMB)
                 let kmbOutput = await checkKmbRoute(route, userLat, userLon, result, '', false);
-                if (kmbOutput.includes('路線未找到')) {
-                    kmbOutput = '';
-                } else {
-                    kmbOutput = `<div class="company-block"><strong>九巴 (KMB)</strong><br>${kmbOutput}</div>`;
-                }
+                let kmbFound = !kmbOutput.includes('路線未找到');
+                let kmbMinDistance = kmbFound ? Math.min(lastNearestInboundKMB?.distance || Infinity, lastNearestOutboundKMB?.distance || Infinity) : Infinity;
 
-                // 再查詢城巴 (CTB)
+                // 查詢城巴 (CTB)
                 let ctbOutput = await checkCitybusRoute(route, userLat, userLon, result, '', false);
-                if (ctbOutput.includes('路線未找到')) {
-                    ctbOutput = '';
+                let ctbFound = !ctbOutput.includes('路線未找到');
+                let ctbMinDistance = ctbFound ? Math.min(lastNearestInboundCTB?.distance || Infinity, lastNearestOutboundCTB?.distance || Infinity) : Infinity;
+
+                // 比較距離並選擇最近嘅公司
+                if (kmbFound && ctbFound) {
+                    if (kmbMinDistance <= ctbMinDistance) {
+                        output += `<div class="company-block"><strong>九巴 (KMB)</strong><br>${kmbOutput}</div>`;
+                        lastCompany = 'kmb';
+                    } else {
+                        output += `<div class="company-block"><strong>城巴 (CTB)</strong><br>${ctbOutput}</div>`;
+                        lastCompany = 'citybus';
+                    }
+                } else if (kmbFound) {
+                    output += `<div class="company-block"><strong>九巴 (KMB)</strong><br>${kmbOutput}</div>`;
+                    lastCompany = 'kmb';
+                } else if (ctbFound) {
+                    output += `<div class="company-block"><strong>城巴 (CTB)</strong><br>${ctbOutput}</div>`;
+                    lastCompany = 'citybus';
                 } else {
-                    ctbOutput = `<div class="company-block"><strong>城巴 (CTB)</strong><br>${ctbOutput}</div>`;
-                }
-
-                // 合併結果
-                output += kmbOutput + ctbOutput;
-
-                if (!kmbOutput && !ctbOutput) {
                     output += '未找到該路線，請確認路線號碼是否正確。';
                 }
 
@@ -138,21 +145,18 @@
         }
 
         async function updateETADisplay() {
-            if (!lastRoute || !userLat || !userLon) return;
+            if (!lastRoute || !userLat || !userLon || !lastCompany) return;
 
             let result = document.getElementById("result");
             let output = `定位座標：(${userLat.toFixed(4)}, ${userLon.toFixed(4)})<br>`;
 
             try {
-                // 更新九巴 (KMB)
-                let kmbOutput = await checkKmbRoute(lastRoute, userLat, userLon, result, '', true);
-                if (!kmbOutput.includes('路線未找到')) {
+                // 只更新距離最近嘅公司
+                if (lastCompany === 'kmb') {
+                    let kmbOutput = await checkKmbRoute(lastRoute, userLat, userLon, result, '', true);
                     output += `<div class="company-block"><strong>九巴 (KMB)</strong><br>${kmbOutput}</div>`;
-                }
-
-                // 更新城巴 (CTB)
-                let ctbOutput = await checkCitybusRoute(lastRoute, userLat, userLon, result, '', true);
-                if (!ctbOutput.includes('路線未找到')) {
+                } else if (lastCompany === 'citybus') {
+                    let ctbOutput = await checkCitybusRoute(lastRoute, userLat, userLon, result, '', true);
                     output += `<div class="company-block"><strong>城巴 (CTB)</strong><br>${ctbOutput}</div>`;
                 }
 
