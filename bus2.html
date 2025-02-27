@@ -155,7 +155,7 @@
                     const inboundData = await inboundResponse.json();
                     const inboundStops = inboundData.data || [];
 
-                    const outboundResponse = await fetch(`${https://rt.data.gov.hk/v2/transport/citybus/route-stop/CTB/${route}/outbound`);
+                    const outboundResponse = await fetch(`https://rt.data.gov.hk/v2/transport/citybus/route-stop/CTB/${route}/outbound`);
                     if (!outboundResponse.ok) throw new Error('outbound 路線站點資料獲取失敗（狀態碼：${outboundResponse.status}）');
                     const outboundData = await outboundResponse.json();
                     const outboundStops = outboundData.data || [];
