@@ -58,7 +58,7 @@
     </style>
 </head>
 <body>
-    <h1>查詢巴士最近站點與到站時間12</h1>
+    <h1>查詢巴士最近站點與到站時間22</h1>
     <input type="text" id="route" placeholder="輸入路線號碼 (如 50M 或 960)">
     <select id="company">
         <option value="">請選擇巴士公司</option>
@@ -170,72 +170,102 @@
 
                     // Inbound 站點
                     for (let stop of inboundStops) {
-                        const stopResponse = await fetch(`${CITYBUS_BASE_URL}/stop/${stop.stop}`);
-                        if (!stopResponse.ok) continue; // 跳過無效站點
-                        const stopData = await stopResponse.json();
-                        const stopDetail = stopData.data;
+                        try {
+                            const stopResponse = await fetch(`${CITYBUS_BASE_URL}/stop/${stop.stop}`);
+                            if (!stopResponse.ok) {
+                                console.log(`無法獲取站點 ${stop.stop} 資料（狀態碼：${stopResponse.status}）`);
+                                continue;
+                            }
+                            const stopData = await stopResponse.json();
+                            const stopDetail = stopData.data;
 
-                        if (!stopDetail || !stopDetail.latitude || !stopDetail.longitude) continue;
+                            if (!stopDetail || !stopDetail.latitude || !stopDetail.longitude) {
+                                console.log(`站點 ${stop.stop} 無有效經緯度數據`);
+                                continue;
+                            }
 
-                        const stopLat = parseFloat(stopDetail.latitude);
-                        const stopLon = parseFloat(stopDetail.longitude);
-                        if (isNaN(stopLat) || isNaN(stopLon)) continue;
+                            const stopLat = parseFloat(stopDetail.latitude);
+                            const stopLon = parseFloat(stopDetail.longitude);
+                            if (isNaN(stopLat) || isNaN(stopLon)) {
+                                console.log(`站點 ${stop.stop} 經緯度無效`);
+                                continue;
+                            }
 
-                        const distance = calculateDistance(userLat, userLon, stopLat, stopLon);
-                        if (distance < minDistanceI) {
-                            minDistanceI = distance;
-                            nearestInboundCandidate = {
-                                stop: stop.stop,
-                                name: stopDetail.name_tc || '未知站名',
-                                lat: stopLat,
-                                lon: stopLon,
-                                distance: distance,
-                                dir: 'I'
-                            };
+                            const distance = calculateDistance(userLat, userLon, stopLat, stopLon);
+                            console.log(`Inbound 站點：${stopDetail.name_tc || stop.stop}, 距離：${distance.toFixed(2)} km`);
+
+                            if (distance < minDistanceI) {
+                                minDistanceI = distance;
+                                nearestInboundCandidate = {
+                                    stop: stop.stop,
+                                    name: stopDetail.name_tc || '未知站名',
+                                    lat: stopLat,
+                                    lon: stopLon,
+                                    distance: distance,
+                                    dir: 'I'
+                                };
+                            }
+                        } catch (err) {
+                            console.log(`處理 Inbound 站點 ${stop.stop} 時出錯：${err.message}`);
+                            continue;
                         }
                     }
 
                     // Outbound 站點
                     for (let stop of outboundStops) {
-                        const stopResponse = await fetch(`${CITYBUS_BASE_URL}/stop/${stop.stop}`);
-                        if (!stopResponse.ok) continue; // 跳過無效站點
-                        const stopData = await stopResponse.json();
-                        const stopDetail = stopData.data;
+                        try {
+                            const stopResponse = await fetch(`${CITYBUS_BASE_URL}/stop/${stop.stop}`);
+                            if (!stopResponse.ok) {
+                                console.log(`無法獲取站點 ${stop.stop} 資料（狀態碼：${stopResponse.status}）`);
+                                continue;
+                            }
+                            const stopData = await stopResponse.json();
+                            const stopDetail = stopData.data;
 
-                        if (!stopDetail || !stopDetail.latitude || !stopDetail.longitude) continue;
+                            if (!stopDetail || !stopDetail.latitude || !stopDetail.longitude) {
+                                console.log(`站點 ${stop.stop} 無有效經緯度數據`);
+                                continue;
+                            }
 
-                        const stopLat = parseFloat(stopDetail.latitude);
-                        const stopLon = parseFloat(stopDetail.longitude);
-                        if (isNaN(stopLat) || isNaN(stopLon)) continue;
+                            const stopLat = parseFloat(stopDetail.latitude);
+                            const stopLon = parseFloat(stopDetail.longitude);
+                            if (isNaN(stopLat) || isNaN(stopLon)) {
+                                console.log(`站點 ${stop.stop} 經緯度無效`);
+                                continue;
+                            }
 
-                        const distance = calculateDistance(userLat, userLon, stopLat, stopLon);
-                        if (distance < minDistanceO) {
-                            minDistanceO = distance;
-                            nearestOutboundCandidate = {
-                                stop: stop.stop,
-                                name: stopDetail.name_tc || '未知站名',
-                                lat: stopLat,
-                                lon: stopLon,
-                                distance: distance,
-                                dir: 'O'
-                            };
+                            const distance = calculateDistance(userLat, userLon, stopLat, stopLon);
+                            console.log(`Outbound 站點：${stopDetail.name_tc || stop.stop}, 距離：${distance.toFixed(2)} km`);
+
+                            if (distance < minDistanceO) {
+                                minDistanceO = distance;
+                                nearestOutboundCandidate = {
+                                    stop: stop.stop,
+                                    name: stopDetail.name_tc || '未知站名',
+                                    lat: stopLat,
+                                    lon: stopLon,
+                                    distance: distance,
+                                    dir: 'O'
+                                };
+                            }
+                        } catch (err) {
+                            console.log(`處理 Outbound 站點 ${stop.stop} 時出錯：${err.message}`);
+                            continue;
                         }
                     }
 
                     // 確認最近站點
-                    if (!nearestInboundCandidate || !nearestOutboundCandidate) {
-                        const fallbackStop = nearestInboundCandidate || nearestOutboundCandidate;
-                        if (!fallbackStop) throw new Error('無有效站點數據');
-                        lastNearestInbound = nearestInboundCandidate || { ...fallbackStop, dir: 'I' };
-                        lastNearestOutbound = nearestOutboundCandidate || { ...fallbackStop, dir: 'O' };
-                    } else {
-                        lastNearestInbound = nearestInboundCandidate;
-                        lastNearestOutbound = nearestOutboundCandidate;
+                    if (!nearestInboundCandidate && !nearestOutboundCandidate) {
+                        throw new Error('無任何有效站點數據可用');
                     }
 
-                    // 調試距離信息
-                    console.log(`Inbound 最近站點：${lastNearestInbound.name}, 距離：${minDistanceI.toFixed(2)} km`);
-                    console.log(`Outbound 最近站點：${lastNearestOutbound.name}, 距離：${minDistanceO.toFixed(2)} km`);
+                    lastNearestInbound = nearestInboundCandidate || nearestOutboundCandidate;
+                    lastNearestOutbound = nearestOutboundCandidate || nearestInboundCandidate;
+                    if (lastNearestInbound) lastNearestInbound.dir = 'I';
+                    if (lastNearestOutbound) lastNearestOutbound.dir = 'O';
+
+                    console.log(`最終 Inbound 最近站點：${lastNearestInbound.name}, 距離：${minDistanceI.toFixed(2)} km`);
+                    console.log(`最終 Outbound 最近站點：${lastNearestOutbound.name}, 距離：${minDistanceO.toFixed(2)} km`);
                 }
 
                 // Step 3: 獲取 ETA
