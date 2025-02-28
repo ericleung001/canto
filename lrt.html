@@ -114,11 +114,64 @@
     </div>
 
     <script>
-        // 車站列表（請從文檔補充完整）
+        // 更新後嘅車站列表
         const stations = {
-            '001': '屯門碼頭',
-            '002': '青松',
-            '003': '鳴琴',
+            'n': '河田',
+            '75': 'Choy Yee Bridge 蔡意橋',
+            '80': 'Affluence 澤豐',
+            '90': 'Tuen Mun Hospital 屯門醫院',
+            '100': 'Siu Hong 兆康',
+            '110': 'Kei Lun 麒麟',
+            '120': 'Ching Chung 青松',
+            '130': 'Kin Sang 建生',
+            '140': 'Tin King 田景',
+            '150': 'Leung King 良景',
+            '160': 'San Wai 新圍',
+            '170': 'Shek Pai 石排',
+            '180': 'Shan King (North) 山景 (北)',
+            '190': 'Shan King (South) 山景 (南)',
+            '200': 'Ming Kum 鳴琴',
+            '212': 'Tai Hing (North) 大興 (北)',
+            '220': 'Tai Hing (South) 大興 (南)',
+            '230': 'Ngan Wai 銀圍',
+            '240': 'Siu Hei 兆禧',
+            '250': 'Tuen Mun Swimming Pool 屯門泳池',
+            '260': 'Town Centre 市中心', // 假設 260，原文無提供 ID
+            '295': 'Tuen Mun 屯門',
+            '300': 'Pui To 杯渡',
+            '310': 'Hoh Fuk Tong 何福堂',
+            '320': 'San Hui 新墟',
+            '330': 'Prime View 景峰',
+            '340': 'Fung Tei 鳳地',
+            '350': 'Lam Tei 藍地',
+            '360': 'Nai Wai 泥圍',
+            '370': 'Chung Uk Tsuen 鍾屋村',
+            '380': 'Hung Shui Kiu 洪水橋',
+            '390': 'Tong Fong Tsuen 塘坊村',
+            '400': 'Ping Shan 屏山',
+            '425': 'Hang Mei Tsuen 坑尾村',
+            '430': 'Tin Shui Wai 天水圍',
+            '435': 'Tin Tsz 天慈',
+            '445': 'Tin Yiu 天耀',
+            '448': 'Locwood 樂湖',
+            '450': 'Tin Wu 天湖',
+            '455': 'Ginza 銀座',
+            '460': 'Tin Shui 天瑞',
+            '468': 'Chung Fu 頌富',
+            '480': 'Tin Fu 天富',
+            '490': 'Chestwood 翠湖',
+            '500': 'Tin Wing 天榮',
+            '510': 'Tin Yuet 天悅',
+            '520': 'Tin Sau 天秀',
+            '530': 'Wetland Park 濕地公園',
+            '540': 'Tin Heng 天恒',
+            '550': 'Tin Yat 天逸',
+            '560': 'Shui Pin Wai 水邊圍',
+            '570': 'Fung Nin Road 豐年路',
+            '580': 'Hong Lok Road 康樂路',
+            '590': 'Tai Tong Road 大棠路',
+            '600': 'Yuen Long 元朗',
+            '920': 'Sam Shing 三聖',
         };
 
         // 初始化車站選擇
@@ -179,7 +232,7 @@
 
             const routes = data.platform_list
                 .flatMap(p => p.route_list || [])
-                .slice(0, 5); // 改為最多 5 個
+                .slice(0, 5); // 最多 5 個
 
             if (routes.length === 0) {
                 trainDisplay.innerHTML += '<p class="error">NO ROUTE DATA AVAILABLE</p>';
@@ -222,7 +275,7 @@
                 for (let i = 0; i < Math.min(length, 2); i++) { // 最多顯示 2 張
                     const trainImg = document.createElement('img');
                     trainImg.className = 'train-image';
-                    trainImg.src = 'train.jpg'; // 替換成實際路徑
+                    trainImg.src = '12nanbu.png'; // 替換成實際路徑
                     trainLength.appendChild(trainImg);
                 }
 
