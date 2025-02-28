@@ -114,13 +114,16 @@
     </div>
 
     <script>
-        // 更新後嘅車站列表，加入經緯度
+        // 完整 68 個車站列表，帶估計經緯度
         const stations = {
-            '70': { name: '河田', lat: 22.39, lng: 113.97 }, // 估計值，請驗證
+            '001': { name: 'Tuen Mun Ferry Pier 屯門碼頭', lat: 22.3738, lng: 113.9667 },
+            '70': { name: 'Ho Tin 河田', lat: 22.3950, lng: 113.9700 },
             '75': { name: 'Choy Yee Bridge 蔡意橋', lat: 22.3980, lng: 113.9710 },
             '80': { name: 'Affluence 澤豐', lat: 22.3990, lng: 113.9720 },
             '90': { name: 'Tuen Mun Hospital 屯門醫院', lat: 22.4070, lng: 113.9750 },
+            '95': { name: 'Tsing Shan Tsuen 青山村', lat: 22.4090, lng: 113.9760 },
             '100': { name: 'Siu Hong 兆康', lat: 22.4125, lng: 113.9786 },
+            '105': { name: 'Siu Hong Court 兆康苑', lat: 22.4140, lng: 113.9790 },
             '110': { name: 'Kei Lun 麒麟', lat: 22.4150, lng: 113.9800 },
             '120': { name: 'Ching Chung 青松', lat: 22.4080, lng: 113.9660 },
             '130': { name: 'Kin Sang 建生', lat: 22.4060, lng: 113.9640 },
@@ -131,12 +134,19 @@
             '180': { name: 'Shan King (North) 山景 (北)', lat: 22.4025, lng: 113.9650 },
             '190': { name: 'Shan King (South) 山景 (南)', lat: 22.4005, lng: 113.9650 },
             '200': { name: 'Ming Kum 鳴琴', lat: 22.4055, lng: 113.9665 },
+            '205': { name: 'Tsing Wun 青雲', lat: 22.4070, lng: 113.9680 },
             '212': { name: 'Tai Hing (North) 大興 (北)', lat: 22.4080, lng: 113.9700 },
             '220': { name: 'Tai Hing (South) 大興 (南)', lat: 22.4060, lng: 113.9700 },
             '230': { name: 'Ngan Wai 銀圍', lat: 22.4040, lng: 113.9720 },
             '240': { name: 'Siu Hei 兆禧', lat: 22.3750, lng: 113.9680 },
+            '242': { name: 'On Ting 安定', lat: 22.3760, lng: 113.9690 },
+            '245': { name: 'Yau Oi 友愛', lat: 22.3770, lng: 113.9700 },
             '250': { name: 'Tuen Mun Swimming Pool 屯門泳池', lat: 22.3780, lng: 113.9700 },
-            '260': { name: 'Town Centre 市中心', lat: 22.3900, lng: 113.9750 }, // 假設 ID
+            '260': { name: 'Town Centre 市中心', lat: 22.3900, lng: 113.9750 },
+            '270': { name: 'Lung Mun Oasis 龍門居', lat: 22.3830, lng: 113.9700 },
+            '275': { name: 'Butterfly 蝴蝶', lat: 22.3810, lng: 113.9710 },
+            '280': { name: 'Melody Garden 怡峰苑', lat: 22.3790, lng: 113.9720 },
+            '290': { name: 'Siu Lun 兆麟', lat: 22.3870, lng: 113.9730 },
             '295': { name: 'Tuen Mun 屯門', lat: 22.3950, lng: 113.9733 },
             '300': { name: 'Pui To 杯渡', lat: 22.3920, lng: 113.9780 },
             '310': { name: 'Hoh Fuk Tong 何福堂', lat: 22.3880, lng: 113.9800 },
@@ -149,15 +159,19 @@
             '380': { name: 'Hung Shui Kiu 洪水橋', lat: 22.4319, lng: 113.9884 },
             '390': { name: 'Tong Fong Tsuen 塘坊村', lat: 22.4350, lng: 113.9960 },
             '400': { name: 'Ping Shan 屏山', lat: 22.4400, lng: 114.0000 },
+            '410': { name: 'Tsui Sing Lau 聚星樓', lat: 22.4410, lng: 114.0020 },
+            '415': { name: 'Shui Pin Tsuen 水邊村', lat: 22.4430, lng: 114.0040 },
             '425': { name: 'Hang Mei Tsuen 坑尾村', lat: 22.4420, lng: 114.0050 },
             '430': { name: 'Tin Shui Wai 天水圍', lat: 22.4485, lng: 113.9965 },
             '435': { name: 'Tin Tsz 天慈', lat: 22.4500, lng: 113.9980 },
+            '440': { name: 'Kingswood 嘉湖', lat: 22.4510, lng: 113.9990 },
             '445': { name: 'Tin Yiu 天耀', lat: 22.4520, lng: 114.0000 },
             '448': { name: 'Locwood 樂湖', lat: 22.4540, lng: 114.0020 },
             '450': { name: 'Tin Wu 天湖', lat: 22.4560, lng: 114.0040 },
             '455': { name: 'Ginza 銀座', lat: 22.4580, lng: 114.0060 },
             '460': { name: 'Tin Shui 天瑞', lat: 22.4600, lng: 114.0080 },
             '468': { name: 'Chung Fu 頌富', lat: 22.4620, lng: 114.0100 },
+            '470': { name: 'Yau Tam Mei 攸潭尾', lat: 22.4630, lng: 114.0110 },
             '480': { name: 'Tin Fu 天富', lat: 22.4640, lng: 114.0120 },
             '490': { name: 'Chestwood 翠湖', lat: 22.4660, lng: 114.0140 },
             '500': { name: 'Tin Wing 天榮', lat: 22.4680, lng: 114.0160 },
@@ -289,10 +303,8 @@
 
                 const time = document.createElement('div');
                 time.className = 'time';
-                const minutes = route.time_en ? 
-                    parseInt(route.time_en.replace(' min', '')) : 
-                    null;
-                time.textContent = minutes !== null ? (minutes === 0 ? '即將到達' : `${minutes} 分鐘`) : 'N/A';
+                const minutes = route.time_en ? parseInt(route.time_en.replace(' min', '')) : NaN;
+                time.textContent = isNaN(minutes) ? '已到達' : (minutes === 0 ? '即將到達' : `${minutes} 分鐘`);
 
                 const trainLength = document.createElement('div');
                 trainLength.className = 'train-length';
@@ -317,6 +329,7 @@
         stationSelect.addEventListener('change', () => updateDisplay());
 
         // 定位並自動選擇最近車站
+        const trainDisplay = document.getElementById('trainDisplay');
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
