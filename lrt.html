@@ -2,13 +2,6 @@
 <html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- iOS 全螢幕支援 -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <link rel="apple-touch-icon" sizes="180x180" href="/AppIcon~ipad.png">
-    <link rel="apple-touch-startup-image" href="/splash.png">
     <title>輕鐵到站時間 - LED風格</title>
     <style>
         body {
@@ -268,6 +261,7 @@
 
             if (data.status !== 0) {
                 console.warn('API Status is not 0:', data.status);
+                trainDisplay.innerHTML = '<p class="error">WARNING: DATA MAY BE INCOMPLETE (STATUS: ' + data.status + ')</p>';
             } else {
                 trainDisplay.innerHTML = '';
             }
@@ -277,9 +271,21 @@
                 return;
             }
 
+            // 將 route_list 同 platform_id 關聯，並排序
             const routes = data.platform_list
-                .flatMap(p => p.route_list || [])
-                .slice(0, 5); // 最多 5 個
+                .flatMap(platform => (platform.route_list || []).map(route => ({
+                    ...route,
+                    platform_id: platform.platform_id
+                })))
+                .sort((a, b) => {
+                    const timeA = a.time_en ? parseInt(a.time_en.replace(' min', '')) : NaN;
+                    const timeB = b.time_en ? parseInt(b.time_en.replace(' min', '')) : NaN;
+                    const minutesA = isNaN(timeA) ? 0 : timeA;
+                    const minutesB = isNaN(timeB) ? 0 : timeB;
+                    // 首先按時間排序，再按 platform_id 排序
+                    return minutesA - minutesB || a.platform_id - b.platform_id;
+                })
+                .slice(0, 4); // 最多 4 個
 
             if (routes.length === 0) {
                 trainDisplay.innerHTML += '<p class="error">NO ROUTE DATA AVAILABLE</p>';
@@ -318,7 +324,7 @@
                 for (let i = 0; i < Math.min(length, 2); i++) {
                     const trainImg = document.createElement('img');
                     trainImg.className = 'train-image';
-                    trainImg.src = '12nanbu.png';
+                    trainImg.src = 'train.jpg';
                     trainLength.appendChild(trainImg);
                 }
 
