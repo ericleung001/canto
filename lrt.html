@@ -321,7 +321,10 @@
 
                 const time = document.createElement('div');
                 time.className = 'time';
-                time.textContent = route.arrival_departure === 'A' ? '即將到達' : (route.arrival_departure === 'D' ? '已開出' : 'N/A');
+                const minutes = route.time_en ? parseInt(route.time_en.replace(' min', '')) : NaN;
+                time.textContent = isNaN(minutes) 
+                    ? (route.arrival_departure === 'A' ? '即將到達' : (route.arrival_departure === 'D' ? '已開出' : 'N/A'))
+                    : (minutes === 0 ? '即將到達/出發' : `${minutes} 分鐘`);
 
                 const trainLength = document.createElement('div');
                 trainLength.className = 'train-length';
