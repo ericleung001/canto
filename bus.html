@@ -4,11 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <!-- iOS 全螢幕支援 -->
-    <meta name="apple-mobile-web-app-capable" content="yes"> <!-- 啟用全螢幕模式 -->
-    <meta name="apple-mobile-web-app-status-bar-style" content="black"> <!-- 狀態列黑色 -->
-    <!-- iOS 圖標（需自行上傳圖標檔案至伺服器） -->
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"> <!-- 180x180 圖標 -->
-    <!-- iOS 啟動畫面（可選，需提供不同尺寸檔案） -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon" sizes="180x180" href="/AppIcon~ipad.png">
     <link rel="apple-touch-startup-image" href="/splash.png">
     <title>巴士最近站點與到站時間</title>
     <style>
@@ -72,19 +70,26 @@
         .eta-time {
             margin-left: 20px;
         }
+        #route-count {
+            font-size: 3vw;
+            color: white;
+            margin-top: 5px;
+        }
         @media (max-width: 600px) {
             h1 { font-size: 6vw; }
             select, button { font-size: 5vw; }
             #result { font-size: 5vw; }
+            #route-count { font-size: 4vw; }
         }
     </style>
 </head>
 <body onload="initializePage()">
-    <h1>查詢巴士最近站點與到站時間v0.5</h1>
+    <h1>查詢巴士最近站點與到站時間v3.0</h1>
     <div id="location">定位座標：載入中...</div>
     <select id="route">
         <option value="">請選擇附近巴士路線</option>
     </select>
+    <div id="route-count">可用路線數量：0</div>
     <button onclick="getBusTime()">查詢</button>
     <div id="result"></div>
 
@@ -95,6 +100,7 @@
         const KMB_STOP_API = 'https://data.etabus.gov.hk/v1/transport/kmb/stop';
 
         let updateInterval = null;
+        let locationInterval = null;
         let lastRoute = null;
         let lastCompany = null;
         let lastNearestInboundKMB = null;
@@ -105,6 +111,11 @@
         let userLon = null;
 
         async function initializePage() {
+            await updateLocationAndRoutes(); // 首次定位
+            locationInterval = setInterval(updateLocationAndRoutes, 10000); // 每 10 秒更新定位
+        }
+
+        async function updateLocationAndRoutes() {
             try {
                 const position = await getUserLocation();
                 userLat = position.coords.latitude;
@@ -183,6 +194,9 @@
                 option.text = route;
                 routeSelect.appendChild(option);
             });
+
+            // 更新路線數量
+            document.getElementById("route-count").innerHTML = `可用路線數量：${sortedRoutes.length}`;
         }
 
         async function fetchKmbRoutes(userLat, userLon) {
