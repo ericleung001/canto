@@ -114,72 +114,72 @@
     </div>
 
     <script>
-        // 更新後嘅車站列表
+        // 更新後嘅車站列表，加入經緯度
         const stations = {
-            'n': '河田',
-            '75': 'Choy Yee Bridge 蔡意橋',
-            '80': 'Affluence 澤豐',
-            '90': 'Tuen Mun Hospital 屯門醫院',
-            '100': 'Siu Hong 兆康',
-            '110': 'Kei Lun 麒麟',
-            '120': 'Ching Chung 青松',
-            '130': 'Kin Sang 建生',
-            '140': 'Tin King 田景',
-            '150': 'Leung King 良景',
-            '160': 'San Wai 新圍',
-            '170': 'Shek Pai 石排',
-            '180': 'Shan King (North) 山景 (北)',
-            '190': 'Shan King (South) 山景 (南)',
-            '200': 'Ming Kum 鳴琴',
-            '212': 'Tai Hing (North) 大興 (北)',
-            '220': 'Tai Hing (South) 大興 (南)',
-            '230': 'Ngan Wai 銀圍',
-            '240': 'Siu Hei 兆禧',
-            '250': 'Tuen Mun Swimming Pool 屯門泳池',
-            '260': 'Town Centre 市中心', // 假設 260，原文無提供 ID
-            '295': 'Tuen Mun 屯門',
-            '300': 'Pui To 杯渡',
-            '310': 'Hoh Fuk Tong 何福堂',
-            '320': 'San Hui 新墟',
-            '330': 'Prime View 景峰',
-            '340': 'Fung Tei 鳳地',
-            '350': 'Lam Tei 藍地',
-            '360': 'Nai Wai 泥圍',
-            '370': 'Chung Uk Tsuen 鍾屋村',
-            '380': 'Hung Shui Kiu 洪水橋',
-            '390': 'Tong Fong Tsuen 塘坊村',
-            '400': 'Ping Shan 屏山',
-            '425': 'Hang Mei Tsuen 坑尾村',
-            '430': 'Tin Shui Wai 天水圍',
-            '435': 'Tin Tsz 天慈',
-            '445': 'Tin Yiu 天耀',
-            '448': 'Locwood 樂湖',
-            '450': 'Tin Wu 天湖',
-            '455': 'Ginza 銀座',
-            '460': 'Tin Shui 天瑞',
-            '468': 'Chung Fu 頌富',
-            '480': 'Tin Fu 天富',
-            '490': 'Chestwood 翠湖',
-            '500': 'Tin Wing 天榮',
-            '510': 'Tin Yuet 天悅',
-            '520': 'Tin Sau 天秀',
-            '530': 'Wetland Park 濕地公園',
-            '540': 'Tin Heng 天恒',
-            '550': 'Tin Yat 天逸',
-            '560': 'Shui Pin Wai 水邊圍',
-            '570': 'Fung Nin Road 豐年路',
-            '580': 'Hong Lok Road 康樂路',
-            '590': 'Tai Tong Road 大棠路',
-            '600': 'Yuen Long 元朗',
-            '920': 'Sam Shing 三聖',
+            '70': { name: '河田', lat: 22.39, lng: 113.97 }, // 估計值，請驗證
+            '75': { name: 'Choy Yee Bridge 蔡意橋', lat: 22.3980, lng: 113.9710 },
+            '80': { name: 'Affluence 澤豐', lat: 22.3990, lng: 113.9720 },
+            '90': { name: 'Tuen Mun Hospital 屯門醫院', lat: 22.4070, lng: 113.9750 },
+            '100': { name: 'Siu Hong 兆康', lat: 22.4125, lng: 113.9786 },
+            '110': { name: 'Kei Lun 麒麟', lat: 22.4150, lng: 113.9800 },
+            '120': { name: 'Ching Chung 青松', lat: 22.4080, lng: 113.9660 },
+            '130': { name: 'Kin Sang 建生', lat: 22.4060, lng: 113.9640 },
+            '140': { name: 'Tin King 田景', lat: 22.4040, lng: 113.9620 },
+            '150': { name: 'Leung King 良景', lat: 22.4020, lng: 113.9600 },
+            '160': { name: 'San Wai 新圍', lat: 22.4000, lng: 113.9580 },
+            '170': { name: 'Shek Pai 石排', lat: 22.3980, lng: 113.9560 },
+            '180': { name: 'Shan King (North) 山景 (北)', lat: 22.4025, lng: 113.9650 },
+            '190': { name: 'Shan King (South) 山景 (南)', lat: 22.4005, lng: 113.9650 },
+            '200': { name: 'Ming Kum 鳴琴', lat: 22.4055, lng: 113.9665 },
+            '212': { name: 'Tai Hing (North) 大興 (北)', lat: 22.4080, lng: 113.9700 },
+            '220': { name: 'Tai Hing (South) 大興 (南)', lat: 22.4060, lng: 113.9700 },
+            '230': { name: 'Ngan Wai 銀圍', lat: 22.4040, lng: 113.9720 },
+            '240': { name: 'Siu Hei 兆禧', lat: 22.3750, lng: 113.9680 },
+            '250': { name: 'Tuen Mun Swimming Pool 屯門泳池', lat: 22.3780, lng: 113.9700 },
+            '260': { name: 'Town Centre 市中心', lat: 22.3900, lng: 113.9750 }, // 假設 ID
+            '295': { name: 'Tuen Mun 屯門', lat: 22.3950, lng: 113.9733 },
+            '300': { name: 'Pui To 杯渡', lat: 22.3920, lng: 113.9780 },
+            '310': { name: 'Hoh Fuk Tong 何福堂', lat: 22.3880, lng: 113.9800 },
+            '320': { name: 'San Hui 新墟', lat: 22.3860, lng: 113.9820 },
+            '330': { name: 'Prime View 景峰', lat: 22.3840, lng: 113.9840 },
+            '340': { name: 'Fung Tei 鳳地', lat: 22.4100, lng: 113.9870 },
+            '350': { name: 'Lam Tei 藍地', lat: 22.4200, lng: 113.9900 },
+            '360': { name: 'Nai Wai 泥圍', lat: 22.4280, lng: 113.9920 },
+            '370': { name: 'Chung Uk Tsuen 鍾屋村', lat: 22.4300, lng: 113.9940 },
+            '380': { name: 'Hung Shui Kiu 洪水橋', lat: 22.4319, lng: 113.9884 },
+            '390': { name: 'Tong Fong Tsuen 塘坊村', lat: 22.4350, lng: 113.9960 },
+            '400': { name: 'Ping Shan 屏山', lat: 22.4400, lng: 114.0000 },
+            '425': { name: 'Hang Mei Tsuen 坑尾村', lat: 22.4420, lng: 114.0050 },
+            '430': { name: 'Tin Shui Wai 天水圍', lat: 22.4485, lng: 113.9965 },
+            '435': { name: 'Tin Tsz 天慈', lat: 22.4500, lng: 113.9980 },
+            '445': { name: 'Tin Yiu 天耀', lat: 22.4520, lng: 114.0000 },
+            '448': { name: 'Locwood 樂湖', lat: 22.4540, lng: 114.0020 },
+            '450': { name: 'Tin Wu 天湖', lat: 22.4560, lng: 114.0040 },
+            '455': { name: 'Ginza 銀座', lat: 22.4580, lng: 114.0060 },
+            '460': { name: 'Tin Shui 天瑞', lat: 22.4600, lng: 114.0080 },
+            '468': { name: 'Chung Fu 頌富', lat: 22.4620, lng: 114.0100 },
+            '480': { name: 'Tin Fu 天富', lat: 22.4640, lng: 114.0120 },
+            '490': { name: 'Chestwood 翠湖', lat: 22.4660, lng: 114.0140 },
+            '500': { name: 'Tin Wing 天榮', lat: 22.4680, lng: 114.0160 },
+            '510': { name: 'Tin Yuet 天悅', lat: 22.4700, lng: 114.0180 },
+            '520': { name: 'Tin Sau 天秀', lat: 22.4720, lng: 114.0200 },
+            '530': { name: 'Wetland Park 濕地公園', lat: 22.4740, lng: 114.0220 },
+            '540': { name: 'Tin Heng 天恒', lat: 22.4760, lng: 114.0240 },
+            '550': { name: 'Tin Yat 天逸', lat: 22.4780, lng: 114.0260 },
+            '560': { name: 'Shui Pin Wai 水邊圍', lat: 22.4450, lng: 114.0280 },
+            '570': { name: 'Fung Nin Road 豐年路', lat: 22.4440, lng: 114.0300 },
+            '580': { name: 'Hong Lok Road 康樂路', lat: 22.4430, lng: 114.0320 },
+            '590': { name: 'Tai Tong Road 大棠路', lat: 22.4420, lng: 114.0340 },
+            '600': { name: 'Yuen Long 元朗', lat: 22.4456, lng: 114.0349 },
+            '920': { name: 'Sam Shing 三聖', lat: 22.3848, lng: 113.9788 },
         };
 
         // 初始化車站選擇
         const stationSelect = document.getElementById('stationSelect');
-        for (let [id, name] of Object.entries(stations)) {
+        for (let [id, data] of Object.entries(stations)) {
             let option = document.createElement('option');
             option.value = id;
-            option.textContent = name;
+            option.textContent = data.name;
             stationSelect.appendChild(option);
         }
 
@@ -200,9 +200,36 @@
             }
         }
 
+        // 計算兩點之間嘅距離（單位：公里）
+        function getDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371; // 地球半徑 (公里)
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c; // 返回距離 (公里)
+        }
+
+        // 搵最近車站
+        function findNearestStation(lat, lng) {
+            let nearestId = null;
+            let minDistance = Infinity;
+
+            for (let [id, data] of Object.entries(stations)) {
+                const distance = getDistance(lat, lng, data.lat, data.lng);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearestId = id;
+                }
+            }
+
+            return nearestId;
+        }
+
         // 更新顯示
-        async function updateDisplay() {
-            const stationId = stationSelect.value;
+        async function updateDisplay(stationId = stationSelect.value) {
             const trainDisplay = document.getElementById('trainDisplay');
 
             if (!stationId) {
@@ -243,7 +270,6 @@
                 const trainCard = document.createElement('div');
                 trainCard.className = 'train-card';
 
-                // 路線資訊
                 const routeInfo = document.createElement('div');
                 routeInfo.className = 'route-info';
 
@@ -258,7 +284,6 @@
                 routeInfo.appendChild(routeNo);
                 routeInfo.appendChild(dest);
 
-                // 詳細資訊
                 const details = document.createElement('div');
                 details.className = 'details';
 
@@ -272,10 +297,10 @@
                 const trainLength = document.createElement('div');
                 trainLength.className = 'train-length';
                 const length = route.train_length ? parseInt(route.train_length) : 0;
-                for (let i = 0; i < Math.min(length, 2); i++) { // 最多顯示 2 張
+                for (let i = 0; i < Math.min(length, 2); i++) {
                     const trainImg = document.createElement('img');
                     trainImg.className = 'train-image';
-                    trainImg.src = '12nanbu.png'; // 替換成實際路徑
+                    trainImg.src = '12nanbu.png';
                     trainLength.appendChild(trainImg);
                 }
 
@@ -289,10 +314,29 @@
         }
 
         // 監聽選擇改變
-        stationSelect.addEventListener('change', updateDisplay);
+        stationSelect.addEventListener('change', () => updateDisplay());
+
+        // 定位並自動選擇最近車站
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const userLat = position.coords.latitude;
+                    const userLng = position.coords.longitude;
+                    const nearestStationId = findNearestStation(userLat, userLng);
+                    stationSelect.value = nearestStationId;
+                    updateDisplay(nearestStationId);
+                },
+                (error) => {
+                    console.error('Geolocation Error:', error);
+                    trainDisplay.innerHTML = '<p class="error">UNABLE TO GET LOCATION - PLEASE SELECT STATION MANUALLY</p>';
+                }
+            );
+        } else {
+            trainDisplay.innerHTML = '<p class="error">GEOLOCATION NOT SUPPORTED - PLEASE SELECT STATION MANUALLY</p>';
+        }
 
         // 每分鐘更新
-        setInterval(updateDisplay, 60000);
+        setInterval(() => updateDisplay(), 60000);
     </script>
 </body>
 </html>
