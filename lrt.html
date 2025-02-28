@@ -268,7 +268,7 @@
 
             if (data.status !== 0) {
                 console.warn('API Status is not 0:', data.status);
-                trainDisplay.innerHTML = '<p class="error">WARNING: DATA MAY BE INCOMPLETE (STATUS: ' + data.status + ')</p>';
+                trainDisplay.innerHTML = '';
             } else {
                 trainDisplay.innerHTML = '';
             }
