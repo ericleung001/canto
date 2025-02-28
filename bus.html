@@ -132,7 +132,7 @@
             const hours = now.getHours();
             const minutes = now.getMinutes();
             const timeInMinutes = hours * 60 + minutes;
-            const nightStart = 0; // 00:00
+            const nightStart = 2 * 60; // 00:00
             const nightEnd = 5 * 60 + 30; // 05:30
             return timeInMinutes >= nightStart && timeInMinutes < nightEnd;
         }
