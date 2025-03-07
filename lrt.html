@@ -40,6 +40,12 @@
             font-family: 'Courier New', monospace;
         }
 
+        .datetime-display {
+            font-size: 18px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
         .train-display {
             display: flex;
             flex-direction: column;
@@ -60,7 +66,7 @@
         .route-info {
             display: flex;
             align-items: center;
-            min-width: 150px;
+            min-width: 120px; /* 減少闊度，由 150px 改為 120px */
             margin-right: 15px;
         }
 
@@ -116,6 +122,7 @@
         <select id="stationSelect">
             <option value="">選擇車站</option>
         </select>
+        <div id="datetimeDisplay" class="datetime-display"></div>
         <div id="trainDisplay" class="train-display"></div>
     </div>
 
@@ -247,6 +254,19 @@
             return nearestId;
         }
 
+        // 更新時間及倒數顯示（hh:mm 實時更新）
+        function updateDatetimeDisplay() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0'); // 月份從 0 開始
+            const year = now.getFullYear();
+            const secondsSinceLastUpdate = Math.floor((now - lastUpdateTime) / 1000);
+            const secondsRemaining = Math.max(30 - secondsSinceLastUpdate, 0);
+            document.getElementById('datetimeDisplay').textContent = `${hours}:${minutes} ${day}/${month}/${year} update:${String(secondsRemaining).padStart(2, '0')}`;
+        }
+
         // 更新顯示
         async function updateDisplay(stationId = stationSelect.value) {
             const trainDisplay = document.getElementById('trainDisplay');
@@ -342,6 +362,9 @@
                 trainCard.appendChild(details);
                 trainDisplay.appendChild(trainCard);
             });
+
+            // 更新最後更新時間
+            lastUpdateTime = new Date();
         }
 
         // 監聽選擇改變
@@ -349,6 +372,7 @@
 
         // 定位並自動選擇最近車站
         const trainDisplay = document.getElementById('trainDisplay');
+        let lastUpdateTime = new Date(); // 記錄最後更新時間
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -367,8 +391,14 @@
             trainDisplay.innerHTML = '<p class="error">GEOLOCATION NOT SUPPORTED - PLEASE SELECT STATION MANUALLY</p>';
         }
 
-        // 每 30 秒更新
+        // 每 30 秒更新數據
         setInterval(() => updateDisplay(), 30000);
+
+        // 每秒更新時間及倒數
+        setInterval(() => updateDatetimeDisplay(), 1000);
+
+        // 初次顯示時間
+        updateDatetimeDisplay();
     </script>
 </body>
 </html>
