@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- iOS 全螢幕支援 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="apple-touch-icon" sizes="180x180" href="/IMG_0186.png">
+    <link rel="apple-touch-startup-image" href="/IMG_0186.png">
+    <title>輕鐵到站時間</title>
+    <style>
+        body {
+            background: #000;
+            font-family: 'Courier New', monospace;
+            color: #00ff00;
+            margin: 0;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #111;
+            border: 2px solid #333;
+            border-radius: 5px;
+            padding: 15px;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+
+        select {
+            padding: 8px;
+            background: #222;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            border-radius: 3px;
+            width: 100%;
+            margin-bottom: 15px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .datetime-display {
+            font-size: 18px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .train-display {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .train-card {
+            background: #111;
+            border: 1px solid #00ff00;
+            border-radius: 3px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            height: 100px;
+            overflow: hidden;
+        }
+
+        .route-info {
+            display: flex;
+            align-items: center;
+            min-width: 120px; /* 減少闊度，由 150px 改為 120px */
+            margin-right: 15px;
+        }
+
+        .route-no {
+            font-size: 28px;
+            font-weight: bold;
+            background: #ff0000;
+            color: #fff;
+            padding: 5px;
+            border-radius: 3px;
+            min-width: 60px;
+            text-align: center;
+            margin-right: 10px;
+        }
+
+        .dest {
+            font-size: 20px;
+            color: #00ff00;
+        }
+
+        .details {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-right: 15px;
+        }
+
+        .time {
+            font-size: 20px;
+            color: #00ff00;
+        }
+
+        .train-length {
+            display: flex;
+            gap: 5px;
+        }
+
+        .train-image {
+            width: 60px;
+            height: auto;
+            filter: brightness(1.5);
+        }
+
+        .error {
+            color: #ff0000;
+            text-align: center;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <select id="stationSelect">
+            <option value="">選擇車站</option>
+        </select>
+        <div id="datetimeDisplay" class="datetime-display"></div>
+        <div id="trainDisplay" class="train-display"></div>
+    </div>
+
+    <script>
+        // 完整 68 個車站列表，帶估計經緯度
+        const stations = {
+            '001': { name: 'Tuen Mun Ferry Pier 屯門碼頭', lat: 22.373003, lng: 113.966185 },
+            '70': { name: 'Ho Tin 河田', lat: 22.397453, lng: 113.973109 },
+            '75': { name: 'Choy Yee Bridge 蔡意橋', lat: 22.399758, lng: 113.974175 },
+            '80': { name: 'Affluence 澤豐', lat: 22.403876, lng: 113.976004 },
+            '90': { name: 'Tuen Mun Hospital 屯門醫院', lat: 22.407765, lng: 113.977075 },
+            '40': { name: 'Tsing Shan Tsuen 青山村', lat: 22.390951, lng: 113.967237 },
+            '100': { name: 'Siu Hong 兆康', lat: 22.411822, lng: 113.978137 },
+            '10': { name: 'Melody Garden 美樂', lat: 22.375213, lng: 113.961106 },
+            '110': { name: 'Kei Lun 麒麟', lat: 22.411131, lng: 113.976373 },
+            '120': { name: 'Ching Chung 青松', lat: 22.407381, lng: 113.972741 },
+            '130': { name: 'Kin Sang 建生', lat: 22.406811, lng: 113.969071 },
+            '140': { name: 'Tin King 田景', lat: 22.407869, lng: 113.966441 },
+            '150': { name: 'Leung King 良景', lat: 22.406776, lng: 113.963831 },
+            '160': { name: 'San Wai 新圍', lat: 22.405277, lng: 113.9636133 },
+            '170': { name: 'Shek Pai 石排', lat: 22.401365, lng: 113.967692 },
+            '180': { name: 'Shan King (North) 山景 (北)', lat: 22.398960, lng: 113.967166 },
+            '190': { name: 'Shan King (South) 山景 (南)', lat: 22.396316, lng: 113.966093 },
+            '200': { name: 'Ming Kum 鳴琴', lat: 22.397043, lng: 113.967240 },
+            '50': { name: 'Tsing Wun 青雲', lat: 22.394289, lng: 113.967391 },
+            '212': { name: 'Tai Hing (North) 大興 (北)', lat: 22.404647, lng: 113.970111 },
+            '220': { name: 'Tai Hing (South) 大興 (南)', lat: 22.402723, lng: 113.971969 },
+            '230': { name: 'Ngan Wai 銀圍', lat: 22.402540, lng: 113.974592 },
+            '240': { name: 'Siu Hei 兆禧', lat: 22.375183, lng: 113.966901 },
+            '270': { name: 'On Ting 安定', lat: 22.388097, lng: 113.975103 },
+            '275': { name: 'Yau Oi 友愛', lat: 22.386662, lng: 113.973535 },
+            '250': { name: 'Tuen Mun Swimming Pool 屯門泳池', lat: 22.381138, lng: 113.970461 },
+            '280': { name: 'Town Centre 市中心', lat: 22.391394, lng: 113.974879 },
+            '30': { name: 'Lung Mun 龍門', lat: 22.385192, lng: 113.965065 },
+            '15': { name: 'Butterfly 蝴蝶', lat: 22.378203, lng: 113.961595 },
+            '260': { name: 'Goodview Garden  豐景園', lat: 22.383421, lng: 113.972876 },
+            '265': { name: 'Siu Lun 兆麟', lat: 22.384560, lng: 113.974938 },
+            '295': { name: 'Tuen Mun 屯門', lat: 22.394045, lng: 113.973087 },
+            '300': { name: 'Pui To 杯渡', lat: 22.394528, lng: 113.976449 },
+            '310': { name: 'Hoh Fuk Tong 何福堂', lat: 22.397349, lng: 113.977331 },
+            '320': { name: 'San Hui 新墟', lat: 22.400216, lng: 113.978062 },
+            '330': { name: 'Prime View 景峰', lat: 22.403182, lng: 113.979499 },
+            '340': { name: 'Fung Tei 鳳地', lat: 22.406981, lng: 113.979035 },
+            '350': { name: 'Lam Tei 藍地', lat: 22.417144, lng: 113.981340 },
+            '360': { name: 'Nai Wai 泥圍', lat: 22.424054, lng: 113.986534 },
+            '370': { name: 'Chung Uk Tsuen 鍾屋村', lat: 22.429608, lng: 113.992358 },
+            '380': { name: 'Hung Shui Kiu 洪水橋', lat: 22.433650, lng: 113.997490 },
+            '390': { name: 'Tong Fong Tsuen 塘坊村', lat: 22.440095, lng: 114.006993 },
+            '400': { name: 'Ping Shan 屏山', lat: 22.442708, lng: 114.011848 },
+            '560': { name: 'Shui Pin Wai 水邊圍', lat: 22.444406, lng: 114.019955 },
+            '425': { name: 'Hang Mei Tsuen 坑尾村', lat: 22.445080, lng: 114.005659 },
+            '430': { name: 'Tin Shui Wai 天水圍', lat: 22.449084, lng: 114.005981 },
+            '435': { name: 'Tin Tsz 天慈', lat: 22.452687, lng: 114.005994 },
+            '445': { name: 'Tin Yiu 天耀', lat: 22.450167, lng: 114.002938 },
+            '448': { name: 'Locwood 樂湖', lat: 22.453248, lng: 114.001252 },
+            '450': { name: 'Tin Wu 天湖', lat: 22.454888, lng: 114.005599 },
+            '455': { name: 'Ginza 銀座', lat: 22.457522, lng: 114.004983 },
+            '460': { name: 'Tin Shui 天瑞', lat: 22.455853, lng: 113.999244 },
+            '468': { name: 'Chung Fu 頌富', lat: 22.461994, lng: 113.996840 },
+            '480': { name: 'Tin Fu 天富', lat: 22.464480, lng: 113.997694 },
+            '490': { name: 'Chestwood 翠湖', lat: 22.459641, lng: 113.999574 },
+            '500': { name: 'Tin Wing 天榮', lat: 22.459521, lng: 114.002666 },
+            '510': { name: 'Tin Yuet 天悅', lat: 22.462713, lng: 114.001696 },
+            '520': { name: 'Tin Sau 天秀', lat: 22.465521, lng: 114.002754 },
+            '530': { name: 'Wetland Park 濕地公園', lat: 22.469460, lng: 114.002555 },
+            '540': { name: 'Tin Heng 天恒', lat: 22.469600, lng: 114.000810 },
+            '550': { name: 'Tin Yat 天逸', lat: 22.466711, lng: 113.999296 },
+            '560': { name: 'Shui Pin Wai 水邊圍', lat: 22.444501, lng: 114.019850 },
+            '570': { name: 'Fung Nin Road 豐年路', lat: 22.444535, lng: 114.023981 },
+            '580': { name: 'Hong Lok Road 康樂路', lat: 22.444519, lng: 114.027146 },
+            '590': { name: 'Tai Tong Road 大棠路', lat: 22.444421, lng: 114.029051 },
+            '600': { name: 'Yuen Long 元朗', lat: 22.445079, lng: 114.034743 },
+            '920': { name: 'Sam Shing 三聖', lat: 22.382822, lng: 113.977117 },
+            '20': { name: 'Light Rail Depot 輕鐵車廠', lat: 22.381781, lng: 113.963428 },
+            '60': { name: 'Kin On 建安', lat: 22.394973, lng: 113.969536 },
+        };
+
+        // 初始化車站選擇
+        const stationSelect = document.getElementById('stationSelect');
+        for (let [id, data] of Object.entries(stations)) {
+            let option = document.createElement('option');
+            option.value = id;
+            option.textContent = data.name;
+            stationSelect.appendChild(option);
+        }
+
+        // API 獲取數據
+        async function getTrainSchedule(stationId) {
+            const url = `https://rt.data.gov.hk/v1/transport/mtr/lrt/getSchedule?station_id=${stationId}`;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP Error: ${response.status}`);
+                }
+                const data = await response.json();
+                console.log(`API Response for station ${stationId}:`, data);
+                return data;
+            } catch (error) {
+                console.error('Fetch Error:', error);
+                return null;
+            }
+        }
+
+        // 計算兩點之間嘅距離（單位：公里）
+        function getDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371; // 地球半徑 (公里)
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c; // 返回距離 (公里)
+        }
+
+        // 搵最近車站
+        function findNearestStation(lat, lng) {
+            let nearestId = null;
+            let minDistance = Infinity;
+
+            for (let [id, data] of Object.entries(stations)) {
+                const distance = getDistance(lat, lng, data.lat, data.lng);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearestId = id;
+                }
+            }
+
+            return nearestId;
+        }
+
+        // 更新時間及倒數顯示
+        function updateDatetimeDisplay() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0'); // 月份從 0 開始
+            const year = now.getFullYear();
+            const secondsSinceLastUpdate = Math.floor((now - lastUpdateTime) / 1000);
+            const secondsRemaining = Math.max(30 - secondsSinceLastUpdate, 0);
+            document.getElementById('datetimeDisplay').textContent = `${hours}:${minutes} ${day}/${month}/${year} update:${String(secondsRemaining).padStart(2, '0')}`;
+        }
+
+        // 更新顯示
+        async function updateDisplay(stationId = stationSelect.value) {
+            const trainDisplay = document.getElementById('trainDisplay');
+
+            if (!stationId) {
+                trainDisplay.innerHTML = '<p class="error">PLEASE SELECT STATION</p>';
+                return;
+            }
+
+            trainDisplay.innerHTML = '<p>LOADING...</p>';
+            const data = await getTrainSchedule(stationId);
+
+            if (!data) {
+                trainDisplay.innerHTML = '<p class="error">API CONNECTION FAILED</p>';
+                return;
+            }
+
+            if (data.status !== 0) {
+                console.warn('API Status is not 0:', data.status);
+                trainDisplay.innerHTML = '';
+            } else {
+                trainDisplay.innerHTML = '';
+            }
+
+            if (!data.platform_list || !Array.isArray(data.platform_list)) {
+                trainDisplay.innerHTML += '<p class="error">NO PLATFORM DATA</p>';
+                return;
+            }
+
+            // 將 route_list 同 platform_id 關聯，並排序
+            const routes = data.platform_list
+                .flatMap(platform => (platform.route_list || []).map(route => ({
+                    ...route,
+                    platform_id: platform.platform_id
+                })))
+                .sort((a, b) => {
+                    const timeA = a.time_en ? parseInt(a.time_en.replace(' min', '')) : NaN;
+                    const timeB = b.time_en ? parseInt(b.time_en.replace(' min', '')) : NaN;
+                    const minutesA = isNaN(timeA) ? 0 : timeA;
+                    const minutesB = isNaN(timeB) ? 0 : timeB;
+                    // 首先按時間排序，再按 platform_id 排序
+                    return minutesA - minutesB || a.platform_id - b.platform_id;
+                })
+                .slice(0, 5); // 最多 5 個
+
+            if (routes.length === 0) {
+                trainDisplay.innerHTML += '<p class="error">NO ROUTE DATA AVAILABLE</p>';
+                return;
+            }
+
+            routes.forEach((route, index) => {
+                const trainCard = document.createElement('div');
+                trainCard.className = 'train-card';
+
+                const routeInfo = document.createElement('div');
+                routeInfo.className = 'route-info';
+
+                const routeNo = document.createElement('div');
+                routeNo.className = 'route-no';
+                routeNo.textContent = route.route_no || 'N/A';
+
+                const dest = document.createElement('div');
+                dest.className = 'dest';
+                dest.textContent = route.dest_ch || '未知';
+
+                routeInfo.appendChild(routeNo);
+                routeInfo.appendChild(dest);
+
+                const details = document.createElement('div');
+                details.className = 'details';
+
+                const time = document.createElement('div');
+                time.className = 'time';
+                const minutes = route.time_en ? parseInt(route.time_en.replace(' min', '')) : NaN;
+                time.textContent = isNaN(minutes) 
+                    ? (route.arrival_departure === 'A' ? '即將到達' : (route.arrival_departure === 'D' ? '即將開出' : 'N/A'))
+                    : (minutes === 0 ? '即將到達/出發' : `${minutes} 分鐘`);
+
+                const trainLength = document.createElement('div');
+                trainLength.className = 'train-length';
+                const length = route.train_length ? parseInt(route.train_length) : 0;
+                for (let i = 0; i < Math.min(length, 2); i++) {
+                    const trainImg = document.createElement('img');
+                    trainImg.className = 'train-image';
+                    trainImg.src = '12nanbu.png';
+                    trainLength.appendChild(trainImg);
+                }
+
+                details.appendChild(time);
+                details.appendChild(trainLength);
+
+                trainCard.appendChild(routeInfo);
+                trainCard.appendChild(details);
+                trainDisplay.appendChild(trainCard);
+            });
+
+            // 更新最後更新時間
+            lastUpdateTime = new Date();
+        }
+
+        // 監聽選擇改變
+        stationSelect.addEventListener('change', () => updateDisplay());
+
+        // 定位並自動選擇最近車站
+        const trainDisplay = document.getElementById('trainDisplay');
+        let lastUpdateTime = new Date(); // 記錄最後更新時間
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const userLat = position.coords.latitude;
+                    const userLng = position.coords.longitude;
+                    const nearestStationId = findNearestStation(userLat, userLng);
+                    stationSelect.value = nearestStationId;
+                    updateDisplay(nearestStationId);
+                },
+                (error) => {
+                    console.error('Geolocation Error:', error);
+                    trainDisplay.innerHTML = '<p class="error">UNABLE TO GET LOCATION - PLEASE SELECT STATION MANUALLY</p>';
+                }
+            );
+        } else {
+            trainDisplay.innerHTML = '<p class="error">GEOLOCATION NOT SUPPORTED - PLEASE SELECT STATION MANUALLY</p>';
+        }
+
+        // 每 30 秒更新數據
+        setInterval(() => updateDisplay(), 30000);
+
+        // 每秒更新時間及倒數
+        setInterval(() => updateDatetimeDisplay(), 1000);
+
+        // 初次顯示時間
+        updateDatetimeDisplay();
+    </script>
+</body>
+</html>
