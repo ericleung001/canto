@@ -324,8 +324,7 @@
                     platform_id: platform.platform_id
                 })))
                 .filter(route => route.route_no && route.dest_ch && route.time_ch) // 過濾無效數據
-                .sort((a, b) => a.platform_id - b.platform_id) // 按 platform_id 排序
-                .slice(0, 5); // 最多 5 個
+                .slice(0, 5); // 最多 5 個，保留原始順序
 
             if (routes.length === 0) {
                 trainDisplay.innerHTML += '<p class="error">NO ROUTE DATA AVAILABLE</p>';
