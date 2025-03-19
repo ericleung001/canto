@@ -544,7 +544,7 @@
                     .slice(0, 3);
 
                 output += `<div class="direction-block">最近巴士站：${lastNearestInboundCTB.name}<br>`;
-                output += `去：${route}(bound:I)(${inboundEtas[0]?.dest_tc || '未知目的地'}):<br>`;
+                output += `去：${route}(${inboundEtas[0]?.dest_tc || '未知目的地'}):<br>`;
                 if (inboundEtas.length) {
                     inboundEtas.forEach(eta => {
                         const etaTime = new Date(eta.eta);
@@ -559,7 +559,7 @@
                 output += `</div>`;
 
                 output += `<div class="direction-block">最近巴士站：${lastNearestOutboundCTB.name}<br>`;
-                output += `回：${route}(bound:O)(${outboundEtas[0]?.dest_tc || '未知目的地'}):<br>`;
+                output += `回：${route}(${outboundEtas[0]?.dest_tc || '未知目的地'}):<br>`;
                 if (outboundEtas.length) {
                     outboundEtas.forEach(eta => {
                         const etaTime = new Date(eta.eta);
@@ -652,7 +652,7 @@
                     .slice(0, 3);
 
                 output += `<div class="direction-block">最近巴士站：${lastNearestOutboundKMB.name}<br>`;
-                output += `去：${route}(bound:O)(${outboundEtas[0]?.dest_tc || '未知目的地'}):<br>`;
+                output += `去：${route}(${outboundEtas[0]?.dest_tc || '未知目的地'}):<br>`;
                 if (outboundEtas.length) {
                     outboundEtas.forEach(eta => {
                         const etaTime = new Date(eta.eta);
@@ -667,7 +667,7 @@
                 output += `</div>`;
 
                 output += `<div class="direction-block">最近巴士站：${lastNearestInboundKMB.name}<br>`;
-                output += `回：${route}(bound:I)(${inboundEtas[0]?.dest_tc || '未知目的地'}):<br>`;
+                output += `回：${route}(${inboundEtas[0]?.dest_tc || '未知目的地'}):<br>`;
                 if (inboundEtas.length) {
                     inboundEtas.forEach(eta => {
                         const etaTime = new Date(eta.eta);
