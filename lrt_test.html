@@ -4,16 +4,15 @@
     <meta charset="UTF-8">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- iOS 全螢幕支援 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <link rel="apple-touch-icon" sizes="180x180" href="/IMG_0186.png">
-    <link rel="apple-touch-startup-image" href="/IMG_0186.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="IMG_0186.png">
+    <link rel="apple-touch-startup-image" href="IMG_0186.png">
     <title>輕鐵到站時間</title>
     <style>
         body {
-            background: #000;
+            background: linear-gradient(135deg, #1a1a1a, #000); /* 漸變背景 */
             font-family: 'Courier New', monospace;
-            color: #00ff00;
+            color: #00cc00; /* 柔和綠色 */
             margin: 0;
             padding: 20px;
             overflow: hidden;
@@ -22,28 +21,47 @@
         .container {
             max-width: 900px;
             margin: 0 auto;
-            background: #111;
-            border: 2px solid #333;
-            border-radius: 5px;
-            padding: 15px;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+            background: rgba(17, 17, 17, 0.9); /* 半透明背景 */
+            border: 2px solid #444;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 204, 0, 0.5); /* 更大陰影 */
         }
 
         select {
-            padding: 8px;
+            padding: 10px;
             background: #222;
-            color: #00ff00;
-            border: 1px solid #00ff00;
-            border-radius: 3px;
+            color: #00cc00;
+            border: 1px solid #00cc00;
+            border-radius: 5px;
             width: 100%;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             font-family: 'Courier New', monospace;
+            font-size: 16px;
+            transition: all 0.3s ease; /* 過渡效果 */
+        }
+
+        select:hover, select:focus {
+            border-color: #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+            outline: none;
         }
 
         .datetime-display {
-            font-size: 18px;
+            font-size: 20px;
             text-align: center;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 5px;
+            box-shadow: inset 0 0 10px rgba(0, 204, 0, 0.3);
+            animation: pulse 2s infinite; /* 輕微脈動效果 */
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.85; }
+            100% { opacity: 1; }
         }
 
         .train-display {
@@ -53,30 +71,37 @@
         }
 
         .train-card {
-            background: #111;
-            border: 1px solid #00ff00;
-            border-radius: 3px;
-            padding: 10px;
+            background: rgba(17, 17, 17, 0.85);
+            border: 1px solid transparent;
+            border-image: linear-gradient(to right, #00cc00, #006600) 1; /* 漸變邊框 */
+            border-radius: 8px;
+            padding: 15px;
             display: flex;
             align-items: center;
             height: 100px;
             overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease; /* 懸停效果 */
+        }
+
+        .train-card:hover {
+            transform: translateY(-5px); /* 輕微抬升 */
+            box-shadow: 0 5px 15px rgba(0, 204, 0, 0.4);
         }
 
         .route-info {
             display: flex;
             align-items: center;
-            min-width: 120px; /* 減少闊度，由 150px 改為 120px */
+            min-width: 120px;
             margin-right: 15px;
         }
 
         .route-no {
             font-size: 28px;
             font-weight: bold;
-            background: #ff0000;
+            background: linear-gradient(45deg, #ff3333, #cc0000); /* 漸變紅色 */
             color: #fff;
-            padding: 5px;
-            border-radius: 3px;
+            padding: 5px 10px;
+            border-radius: 5px;
             min-width: 60px;
             text-align: center;
             margin-right: 10px;
@@ -84,7 +109,7 @@
 
         .dest {
             font-size: 20px;
-            color: #00ff00;
+            color: #00cc00;
         }
 
         .details {
@@ -96,7 +121,7 @@
 
         .time {
             font-size: 20px;
-            color: #00ff00;
+            color: #00cc00;
         }
 
         .train-length {
@@ -105,15 +130,23 @@
         }
 
         .train-image {
-            width: 60px;
+            width: 50px; /* 略減小圖標 */
             height: auto;
             filter: brightness(1.5);
+            transition: transform 0.3s ease; /* 動畫效果 */
+        }
+
+        .train-card:hover .train-image {
+            transform: scale(1.1); /* 懸停時放大 */
         }
 
         .error {
-            color: #ff0000;
+            color: #ff3333; /* 柔和紅色 */
             text-align: center;
             font-size: 18px;
+            padding: 10px;
+            background: rgba(255, 0, 0, 0.1);
+            border-radius: 5px;
         }
     </style>
 </head>
@@ -254,13 +287,13 @@
             return nearestId;
         }
 
-        // 更新時間及倒數顯示
+        // 更新時間及倒數顯示（hh:mm 實時更新）
         function updateDatetimeDisplay() {
             const now = new Date();
             const hours = String(now.getHours()).padStart(2, '0');
             const minutes = String(now.getMinutes()).padStart(2, '0');
             const day = String(now.getDate()).padStart(2, '0');
-            const month = String(now.getMonth() + 1).padStart(2, '0'); // 月份從 0 開始
+            const month = String(now.getMonth() + 1).padStart(2, '0');
             const year = now.getFullYear();
             const secondsSinceLastUpdate = Math.floor((now - lastUpdateTime) / 1000);
             const secondsRemaining = Math.max(30 - secondsSinceLastUpdate, 0);
@@ -296,7 +329,6 @@
                 return;
             }
 
-            // 將 route_list 同 platform_id 關聯，並排序
             const routes = data.platform_list
                 .flatMap(platform => (platform.route_list || []).map(route => ({
                     ...route,
@@ -307,10 +339,9 @@
                     const timeB = b.time_en ? parseInt(b.time_en.replace(' min', '')) : NaN;
                     const minutesA = isNaN(timeA) ? 0 : timeA;
                     const minutesB = isNaN(timeB) ? 0 : timeB;
-                    // 首先按時間排序，再按 platform_id 排序
                     return minutesA - minutesB || a.platform_id - b.platform_id;
                 })
-                .slice(0, 5); // 最多 5 個
+                .slice(0, 5);
 
             if (routes.length === 0) {
                 trainDisplay.innerHTML += '<p class="error">NO ROUTE DATA AVAILABLE</p>';
@@ -363,7 +394,6 @@
                 trainDisplay.appendChild(trainCard);
             });
 
-            // 更新最後更新時間
             lastUpdateTime = new Date();
         }
 
@@ -372,7 +402,7 @@
 
         // 定位並自動選擇最近車站
         const trainDisplay = document.getElementById('trainDisplay');
-        let lastUpdateTime = new Date(); // 記錄最後更新時間
+        let lastUpdateTime = new Date();
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
