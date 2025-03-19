@@ -326,7 +326,7 @@
 
             // 多次遍歷 platform_list，直到搵夠 5 條或無更多路線
             let i = 0;
-            while (routes.length < 6 && i < data.platform_list.length * 2) { // 限制最多遍歷兩次，避免無限循環
+            while (routes.length < 6 && i < data.platform_list.length * 3) { // 限制最多遍歷兩次，避免無限循環
                 const platform = data.platform_list[i % data.platform_list.length]; // 循環取 platform
                 console.log(`Platform ID: ${platform.platform_id}, Route List:`, platform.route_list);
 
