@@ -67,7 +67,7 @@
         .train-display {
             display: flex;
             flex-direction: column;
-            gap: 10px; /* 減少間距，由 15px 改為 10px */
+            gap: 10px;
         }
 
         .train-card {
@@ -75,10 +75,10 @@
             border: 1px solid transparent;
             border-image: linear-gradient(to right, #00cc00, #006600) 1;
             border-radius: 8px;
-            padding: 10px; /* 減少內邊距，由 15px 改為 10px */
+            padding: 10px;
             display: flex;
             align-items: center;
-            height: 70px; /* 減少高度，由 100px 改為 70px */
+            height: 70px;
             overflow: hidden;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
@@ -91,46 +91,46 @@
         .route-info {
             display: flex;
             align-items: center;
-            min-width: 100px; /* 減少寬度，由 120px 改為 100px */
-            margin-right: 10px; /* 減少間距，由 15px 改為 10px */
+            min-width: 100px;
+            margin-right: 10px;
         }
 
         .route-no {
-            font-size: 22px; /* 減少字體，由 28px 改為 22px */
+            font-size: 22px;
             font-weight: bold;
             background: linear-gradient(45deg, #ff3333, #cc0000);
             color: #fff;
-            padding: 3px 8px; /* 減少內邊距，由 5px 10px 改為 3px 8px */
+            padding: 3px 8px;
             border-radius: 5px;
-            min-width: 50px; /* 減少寬度，由 60px 改為 50px */
+            min-width: 50px;
             text-align: center;
-            margin-right: 8px; /* 減少間距，由 10px 改為 8px */
+            margin-right: 8px;
         }
 
         .dest {
-            font-size: 16px; /* 減少字體，由 20px 改為 16px */
+            font-size: 16px;
             color: #00cc00;
         }
 
         .details {
             display: flex;
             flex-direction: column;
-            gap: 3px; /* 減少間距，由 5px 改為 3px */
-            margin-right: 10px; /* 減少間距，由 15px 改為 10px */
+            gap: 3px;
+            margin-right: 10px;
         }
 
         .time {
-            font-size: 16px; /* 減少字體，由 20px 改為 16px */
+            font-size: 16px;
             color: #00cc00;
         }
 
         .train-length {
             display: flex;
-            gap: 3px; /* 減少間距，由 5px 改為 3px */
+            gap: 3px;
         }
 
         .train-image {
-            width: 40px; /* 減少寬度，由 50px 改為 40px */
+            width: 40px;
             height: auto;
             filter: brightness(1.5);
             transition: transform 0.3s ease;
@@ -318,15 +318,24 @@
                 return;
             }
 
-            // 保留原始順序，每次只取一條有效路線資訊
+            // 用來追蹤每個 platform_id 已顯示嘅路線數
+            const platformRouteIndex = new Map();
             const routes = [];
+
             for (const platform of data.platform_list) {
                 if (platform.route_list && platform.route_list.length > 0) {
-                    const validRoute = platform.route_list.find(route => 
+                    // 獲取當前 platform_id 已顯示嘅路線數
+                    const currentIndex = platformRouteIndex.get(platform.platform_id) || 0;
+                    // 過濾有效路線
+                    const validRoutes = platform.route_list.filter(route => 
                         route.route_no && route.dest_ch && route.time_ch
                     );
-                    if (validRoute) {
-                        routes.push({ ...validRoute, platform_id: platform.platform_id });
+                    // 如果有更多路線可以顯示
+                    if (currentIndex < validRoutes.length) {
+                        const route = validRoutes[currentIndex];
+                        routes.push({ ...route, platform_id: platform.platform_id });
+                        // 更新已顯示路線數
+                        platformRouteIndex.set(platform.platform_id, currentIndex + 1);
                     }
                 }
                 if (routes.length >= 5) break; // 最多 5 個
