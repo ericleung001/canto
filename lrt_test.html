@@ -5,14 +5,14 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <link rel="apple-touch-icon" sizes="180x180" href="IMG_0186.png">
-    <link rel="apple-touch-startup-image" href="IMG_0186.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/IMG_0186.png">
+    <link rel="apple-touch-startup-image" href="/IMG_0186.png">
     <title>輕鐵到站時間</title>
     <style>
         body {
-            background: linear-gradient(135deg, #1a1a1a, #000); /* 漸變背景 */
+            background: linear-gradient(135deg, #1a1a1a, #000);
             font-family: 'Courier New', monospace;
-            color: #00cc00; /* 柔和綠色 */
+            color: #00cc00;
             margin: 0;
             padding: 20px;
             overflow: hidden;
@@ -21,11 +21,11 @@
         .container {
             max-width: 900px;
             margin: 0 auto;
-            background: rgba(17, 17, 17, 0.9); /* 半透明背景 */
+            background: rgba(17, 17, 17, 0.9);
             border: 2px solid #444;
             border-radius: 10px;
             padding: 20px;
-            box-shadow: 0 0 20px rgba(0, 204, 0, 0.5); /* 更大陰影 */
+            box-shadow: 0 0 20px rgba(0, 204, 0, 0.5);
         }
 
         select {
@@ -38,7 +38,7 @@
             margin-bottom: 20px;
             font-family: 'Courier New', monospace;
             font-size: 16px;
-            transition: all 0.3s ease; /* 過渡效果 */
+            transition: all 0.3s ease;
         }
 
         select:hover, select:focus {
@@ -55,7 +55,7 @@
             background: rgba(0, 0, 0, 0.7);
             border-radius: 5px;
             box-shadow: inset 0 0 10px rgba(0, 204, 0, 0.3);
-            animation: pulse 2s infinite; /* 輕微脈動效果 */
+            animation: pulse 2s infinite;
         }
 
         @keyframes pulse {
@@ -73,18 +73,18 @@
         .train-card {
             background: rgba(17, 17, 17, 0.85);
             border: 1px solid transparent;
-            border-image: linear-gradient(to right, #00cc00, #006600) 1; /* 漸變邊框 */
+            border-image: linear-gradient(to right, #00cc00, #006600) 1;
             border-radius: 8px;
             padding: 15px;
             display: flex;
             align-items: center;
             height: 100px;
             overflow: hidden;
-            transition: transform 0.2s ease, box-shadow 0.2s ease; /* 懸停效果 */
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
         .train-card:hover {
-            transform: translateY(-5px); /* 輕微抬升 */
+            transform: translateY(-5px);
             box-shadow: 0 5px 15px rgba(0, 204, 0, 0.4);
         }
 
@@ -98,7 +98,7 @@
         .route-no {
             font-size: 28px;
             font-weight: bold;
-            background: linear-gradient(45deg, #ff3333, #cc0000); /* 漸變紅色 */
+            background: linear-gradient(45deg, #ff3333, #cc0000);
             color: #fff;
             padding: 5px 10px;
             border-radius: 5px;
@@ -130,18 +130,18 @@
         }
 
         .train-image {
-            width: 50px; /* 略減小圖標 */
+            width: 50px;
             height: auto;
             filter: brightness(1.5);
-            transition: transform 0.3s ease; /* 動畫效果 */
+            transition: transform 0.3s ease;
         }
 
         .train-card:hover .train-image {
-            transform: scale(1.1); /* 懸停時放大 */
+            transform: scale(1.1);
         }
 
         .error {
-            color: #ff3333; /* 柔和紅色 */
+            color: #ff3333;
             text-align: center;
             font-size: 18px;
             padding: 10px;
@@ -160,7 +160,6 @@
     </div>
 
     <script>
-        // 完整 68 個車站列表，帶估計經緯度
         const stations = {
             '001': { name: 'Tuen Mun Ferry Pier 屯門碼頭', lat: 22.373003, lng: 113.966185 },
             '70': { name: 'Ho Tin 河田', lat: 22.397453, lng: 113.973109 },
@@ -233,7 +232,6 @@
             '60': { name: 'Kin On 建安', lat: 22.394973, lng: 113.969536 },
         };
 
-        // 初始化車站選擇
         const stationSelect = document.getElementById('stationSelect');
         for (let [id, data] of Object.entries(stations)) {
             let option = document.createElement('option');
@@ -242,14 +240,11 @@
             stationSelect.appendChild(option);
         }
 
-        // API 獲取數據
         async function getTrainSchedule(stationId) {
             const url = `https://rt.data.gov.hk/v1/transport/mtr/lrt/getSchedule?station_id=${stationId}`;
             try {
                 const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error(`HTTP Error: ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
                 const data = await response.json();
                 console.log(`API Response for station ${stationId}:`, data);
                 return data;
@@ -259,23 +254,20 @@
             }
         }
 
-        // 計算兩點之間嘅距離（單位：公里）
         function getDistance(lat1, lng1, lat2, lng2) {
-            const R = 6371; // 地球半徑 (公里)
+            const R = 6371;
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLng = (lng2 - lng1) * Math.PI / 180;
             const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
                       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
                       Math.sin(dLng / 2) * Math.sin(dLng / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return R * c; // 返回距離 (公里)
+            return R * c;
         }
 
-        // 搵最近車站
         function findNearestStation(lat, lng) {
             let nearestId = null;
             let minDistance = Infinity;
-
             for (let [id, data] of Object.entries(stations)) {
                 const distance = getDistance(lat, lng, data.lat, data.lng);
                 if (distance < minDistance) {
@@ -283,11 +275,9 @@
                     nearestId = id;
                 }
             }
-
             return nearestId;
         }
 
-        // 更新時間及倒數顯示（hh:mm 實時更新）
         function updateDatetimeDisplay() {
             const now = new Date();
             const hours = String(now.getHours()).padStart(2, '0');
@@ -300,7 +290,6 @@
             document.getElementById('datetimeDisplay').textContent = `${hours}:${minutes} ${day}/${month}/${year} update:${String(secondsRemaining).padStart(2, '0')}`;
         }
 
-        // 更新顯示
         async function updateDisplay(stationId = stationSelect.value) {
             const trainDisplay = document.getElementById('trainDisplay');
 
@@ -335,11 +324,10 @@
                     platform_id: platform.platform_id
                 })))
                 .sort((a, b) => {
-                    const timeA = a.time_en ? parseInt(a.time_en.replace(' min', '')) : NaN;
-                    const timeB = b.time_en ? parseInt(b.time_en.replace(' min', '')) : NaN;
-                    const minutesA = isNaN(timeA) ? 0 : timeA;
-                    const minutesB = isNaN(timeB) ? 0 : timeB;
-                    return minutesA - minutesB || a.platform_id - b.platform_id;
+                    // 若 time_ch 為 "-" 或特定狀態，無法直接比較，預設順序
+                    const orderA = a.time_ch === '-' ? 1 : 0;
+                    const orderB = b.time_ch === '-' ? 1 : 0;
+                    return orderA - orderB || a.platform_id - b.platform_id;
                 })
                 .slice(0, 5);
 
@@ -371,10 +359,11 @@
 
                 const time = document.createElement('div');
                 time.className = 'time';
-                const minutes = route.time_en ? parseInt(route.time_en.replace(' min', '')) : NaN;
-                time.textContent = isNaN(minutes) 
-                    ? (route.arrival_departure === 'A' ? '即將到達' : (route.arrival_departure === 'D' ? '即將開出' : 'N/A'))
-                    : (minutes === 0 ? '即將到達/出發' : `${minutes} 分鐘`);
+                // 直接使用 time_ch 顯示
+                time.textContent = route.time_ch === '-' ? '-' : 
+                                   route.time_ch === '即將抵達' ? '即將抵達' : 
+                                   route.time_ch === '正在離開' ? '正在離開' : 
+                                   route.time_ch || 'N/A';
 
                 const trainLength = document.createElement('div');
                 trainLength.className = 'train-length';
@@ -397,10 +386,8 @@
             lastUpdateTime = new Date();
         }
 
-        // 監聽選擇改變
         stationSelect.addEventListener('change', () => updateDisplay());
 
-        // 定位並自動選擇最近車站
         const trainDisplay = document.getElementById('trainDisplay');
         let lastUpdateTime = new Date();
         if (navigator.geolocation) {
@@ -421,13 +408,8 @@
             trainDisplay.innerHTML = '<p class="error">GEOLOCATION NOT SUPPORTED - PLEASE SELECT STATION MANUALLY</p>';
         }
 
-        // 每 30 秒更新數據
         setInterval(() => updateDisplay(), 30000);
-
-        // 每秒更新時間及倒數
         setInterval(() => updateDatetimeDisplay(), 1000);
-
-        // 初次顯示時間
         updateDatetimeDisplay();
     </script>
 </body>
