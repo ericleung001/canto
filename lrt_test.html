@@ -318,11 +318,14 @@
                 return;
             }
 
-            // 用來追蹤每個 platform_id 已顯示嘅路線數
+            // 追蹤每個 platform_id 已顯示嘅路線數
             const platformRouteIndex = new Map();
             const routes = [];
 
+            console.log('Processing platform_list:', data.platform_list);
+
             for (const platform of data.platform_list) {
+                console.log(`Platform ID: ${platform.platform_id}, Route List:`, platform.route_list);
                 if (platform.route_list && platform.route_list.length > 0) {
                     // 獲取當前 platform_id 已顯示嘅路線數
                     const currentIndex = platformRouteIndex.get(platform.platform_id) || 0;
@@ -330,16 +333,25 @@
                     const validRoutes = platform.route_list.filter(route => 
                         route.route_no && route.dest_ch && route.time_ch
                     );
+                    console.log(`Valid Routes for Platform ${platform.platform_id}:`, validRoutes);
                     // 如果有更多路線可以顯示
                     if (currentIndex < validRoutes.length) {
                         const route = validRoutes[currentIndex];
                         routes.push({ ...route, platform_id: platform.platform_id });
+                        console.log(`Added Route:`, route);
                         // 更新已顯示路線數
                         platformRouteIndex.set(platform.platform_id, currentIndex + 1);
+                    } else {
+                        console.log(`No more valid routes for Platform ${platform.platform_id}`);
                     }
                 }
-                if (routes.length >= 5) break; // 最多 5 個
+                if (routes.length >= 5) {
+                    console.log('Reached 5 routes, breaking');
+                    break;
+                }
             }
+
+            console.log('Final Routes to Display:', routes);
 
             if (routes.length === 0) {
                 trainDisplay.innerHTML += '<p class="error">NO ROUTE DATA AVAILABLE</p>';
