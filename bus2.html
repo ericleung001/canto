@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <link rel="apple-touch-icon" sizes="180x180" href="AppIcon~ipad.png">
-    <link rel="apple-touch-startup-image" href="AppIcon~ipad.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/AppIcon~ipad.png">
+    <link rel="apple-touch-startup-image" href="/splash.png">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght@400;500;700&display=swap" rel="stylesheet">
     <title>巴士最近站點與到站時間</title>
     <style>
@@ -32,7 +32,7 @@
             margin-bottom: 20px;
         }
 
-        select, button {
+        select, button, input[type="text"] {
             margin: 15px 0;
             padding: 12px 15px;
             font-size: 4.5vw;
@@ -141,7 +141,6 @@
             #route-count { font-size: 4vw; }
             .company-block { padding: 12px; }
             .direction-block { padding: 8px; }
-            input[type="text"] { max-width: 150px; } /* 在小螢幕上進一步縮短 */
         }
 
         @keyframes fadeIn {
@@ -155,12 +154,12 @@
     </style>
 </head>
 <body onload="initializePage()">
-    <h1>查詢巴士最近站點與到站時間v3.1</h1>
+    <h1>查詢巴士到站時間</h1>
     <div id="location">定位座標：載入中...</div>
     <select id="route">
         <option value="">請選擇附近巴士路線</option>
     </select>
-    <input type="text" id="route-input" placeholder="或輸入路線 (如 1A)">
+    <input type="text" id="route-input" placeholder="或直接輸入路線號碼 (如 1A)">
     <div id="route-count">可用路線數量：0</div>
     <button onclick="getBusTime()">查詢</button>
     <div id="result"></div>
@@ -323,7 +322,7 @@
                             nearbyRoutes.add(route);
                             break;
                         }
-&D                    }
+                    }
                 } catch (err) {
                     continue;
                 }
@@ -335,7 +334,7 @@
         async function getBusTime() {
             let routeSelect = document.getElementById("route").value.trim().toUpperCase();
             let routeInput = document.getElementById("route-input").value.trim().toUpperCase();
-            let route = routeInput || routeSelect;
+            let route = routeInput || routeSelect; // 優先使用輸入欄位，如果為空則使用下拉選單
             let result = document.getElementById("result");
             let button = document.querySelector("button");
 
