@@ -324,8 +324,12 @@
 
             console.log('Processing platform_list:', data.platform_list);
 
-            for (const platform of data.platform_list) {
+            // 多次遍歷 platform_list，直到搵夠 5 條或無更多路線
+            let i = 0;
+            while (routes.length < 5 && i < data.platform_list.length * 2) { // 限制最多遍歷兩次，避免無限循環
+                const platform = data.platform_list[i % data.platform_list.length]; // 循環取 platform
                 console.log(`Platform ID: ${platform.platform_id}, Route List:`, platform.route_list);
+
                 if (platform.route_list && platform.route_list.length > 0) {
                     // 獲取當前 platform_id 已顯示嘅路線數
                     const currentIndex = platformRouteIndex.get(platform.platform_id) || 0;
@@ -334,6 +338,7 @@
                         route.route_no && route.dest_ch && route.time_ch
                     );
                     console.log(`Valid Routes for Platform ${platform.platform_id}:`, validRoutes);
+
                     // 如果有更多路線可以顯示
                     if (currentIndex < validRoutes.length) {
                         const route = validRoutes[currentIndex];
@@ -345,10 +350,7 @@
                         console.log(`No more valid routes for Platform ${platform.platform_id}`);
                     }
                 }
-                if (routes.length >= 5) {
-                    console.log('Reached 5 routes, breaking');
-                    break;
-                }
+                i++;
             }
 
             console.log('Final Routes to Display:', routes);
