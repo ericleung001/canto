@@ -48,10 +48,10 @@
         }
 
         .datetime-display {
-            font-size: 20px;
+            font-size: 16px;
             text-align: center;
-            margin-bottom: 20px;
-            padding: 10px;
+            margin-bottom: 15px;
+            padding: 5px;
             background: rgba(0, 0, 0, 0.7);
             border-radius: 5px;
             box-shadow: inset 0 0 10px rgba(0, 204, 0, 0.3);
@@ -67,7 +67,7 @@
         .train-display {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 10px;
         }
 
         .train-card {
@@ -75,10 +75,10 @@
             border: 1px solid transparent;
             border-image: linear-gradient(to right, #00cc00, #006600) 1;
             border-radius: 8px;
-            padding: 15px;
+            padding: 10px;
             display: flex;
             align-items: center;
-            height: 100px;
+            height: 70px;
             overflow: hidden;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
@@ -91,46 +91,46 @@
         .route-info {
             display: flex;
             align-items: center;
-            min-width: 120px;
-            margin-right: 15px;
-        }
-
-        .route-no {
-            font-size: 28px;
-            font-weight: bold;
-            background: linear-gradient(45deg, #ff3333, #cc0000);
-            color: #fff;
-            padding: 5px 10px;
-            border-radius: 5px;
-            min-width: 60px;
-            text-align: center;
+            min-width: 100px;
             margin-right: 10px;
         }
 
+        .route-no {
+            font-size: 22px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #ff3333, #cc0000);
+            color: #fff;
+            padding: 3px 8px;
+            border-radius: 5px;
+            min-width: 50px;
+            text-align: center;
+            margin-right: 8px;
+        }
+
         .dest {
-            font-size: 20px;
+            font-size: 16px;
             color: #00cc00;
         }
 
         .details {
             display: flex;
             flex-direction: column;
-            gap: 5px;
-            margin-right: 15px;
+            gap: 3px;
+            margin-right: 10px;
         }
 
         .time {
-            font-size: 20px;
+            font-size: 16px;
             color: #00cc00;
         }
 
         .train-length {
             display: flex;
-            gap: 5px;
+            gap: 3px;
         }
 
         .train-image {
-            width: 50px;
+            width: 40px;
             height: auto;
             filter: brightness(1.5);
             transition: transform 0.3s ease;
@@ -204,7 +204,7 @@
             '380': { name: 'Hung Shui Kiu 洪水橋', lat: 22.433650, lng: 113.997490 },
             '390': { name: 'Tong Fong Tsuen 塘坊村', lat: 22.440095, lng: 114.006993 },
             '400': { name: 'Ping Shan 屏山', lat: 22.442708, lng: 114.011848 },
-            '560': { name: 'Shui Pin Wai 水邊圍', lat: 22.444406, lng: 114.019955 },
+            '560': { name: 'Shui Pin Wai 水邊圍', lat: 22.444406, lng: 113.019955 },
             '425': { name: 'Hang Mei Tsuen 坑尾村', lat: 22.445080, lng: 114.005659 },
             '430': { name: 'Tin Shui Wai 天水圍', lat: 22.449084, lng: 114.005981 },
             '435': { name: 'Tin Tsz 天慈', lat: 22.452687, lng: 114.005994 },
@@ -318,18 +318,42 @@
                 return;
             }
 
-            const routes = data.platform_list
-                .flatMap(platform => (platform.route_list || []).map(route => ({
-                    ...route,
-                    platform_id: platform.platform_id
-                })))
-                .sort((a, b) => {
-                    // 若 time_ch 為 "-" 或特定狀態，無法直接比較，預設順序
-                    const orderA = a.time_ch === '-' ? 1 : 0;
-                    const orderB = b.time_ch === '-' ? 1 : 0;
-                    return orderA - orderB || a.platform_id - b.platform_id;
-                })
-                .slice(0, 5);
+            // 追蹤每個 platform_id 已顯示嘅路線數
+            const platformRouteIndex = new Map();
+            const routes = [];
+
+            console.log('Processing platform_list:', data.platform_list);
+
+            // 多次遍歷 platform_list，直到搵夠 5 條或無更多路線
+            let i = 0;
+            while (routes.length < 5 && i < data.platform_list.length * 2) { // 限制最多遍歷兩次，避免無限循環
+                const platform = data.platform_list[i % data.platform_list.length]; // 循環取 platform
+                console.log(`Platform ID: ${platform.platform_id}, Route List:`, platform.route_list);
+
+                if (platform.route_list && platform.route_list.length > 0) {
+                    // 獲取當前 platform_id 已顯示嘅路線數
+                    const currentIndex = platformRouteIndex.get(platform.platform_id) || 0;
+                    // 過濾有效路線
+                    const validRoutes = platform.route_list.filter(route => 
+                        route.route_no && route.dest_ch && route.time_ch
+                    );
+                    console.log(`Valid Routes for Platform ${platform.platform_id}:`, validRoutes);
+
+                    // 如果有更多路線可以顯示
+                    if (currentIndex < validRoutes.length) {
+                        const route = validRoutes[currentIndex];
+                        routes.push({ ...route, platform_id: platform.platform_id });
+                        console.log(`Added Route:`, route);
+                        // 更新已顯示路線數
+                        platformRouteIndex.set(platform.platform_id, currentIndex + 1);
+                    } else {
+                        console.log(`No more valid routes for Platform ${platform.platform_id}`);
+                    }
+                }
+                i++;
+            }
+
+            console.log('Final Routes to Display:', routes);
 
             if (routes.length === 0) {
                 trainDisplay.innerHTML += '<p class="error">NO ROUTE DATA AVAILABLE</p>';
@@ -345,11 +369,11 @@
 
                 const routeNo = document.createElement('div');
                 routeNo.className = 'route-no';
-                routeNo.textContent = route.route_no || 'N/A';
+                routeNo.textContent = route.route_no;
 
                 const dest = document.createElement('div');
                 dest.className = 'dest';
-                dest.textContent = route.dest_ch || '未知';
+                dest.textContent = route.dest_ch;
 
                 routeInfo.appendChild(routeNo);
                 routeInfo.appendChild(dest);
@@ -359,11 +383,10 @@
 
                 const time = document.createElement('div');
                 time.className = 'time';
-                // 直接使用 time_ch 顯示
                 time.textContent = route.time_ch === '-' ? '-' : 
                                    route.time_ch === '即將抵達' ? '即將抵達' : 
                                    route.time_ch === '正在離開' ? '正在離開' : 
-                                   route.time_ch || 'N/A';
+                                   route.time_ch;
 
                 const trainLength = document.createElement('div');
                 trainLength.className = 'train-length';
