@@ -48,10 +48,10 @@
         }
 
         .datetime-display {
-            font-size: 20px;
+            font-size: 16px; /* 縮小字體，由 20px 改為 16px */
             text-align: center;
-            margin-bottom: 20px;
-            padding: 10px;
+            margin-bottom: 15px; /* 減少間距，由 20px 改為 15px */
+            padding: 5px; /* 減少內邊距，由 10px 改為 5px */
             background: rgba(0, 0, 0, 0.7);
             border-radius: 5px;
             box-shadow: inset 0 0 10px rgba(0, 204, 0, 0.3);
@@ -323,13 +323,9 @@
                     ...route,
                     platform_id: platform.platform_id
                 })))
-                .sort((a, b) => {
-                    // 若 time_ch 為 "-" 或特定狀態，無法直接比較，預設順序
-                    const orderA = a.time_ch === '-' ? 1 : 0;
-                    const orderB = b.time_ch === '-' ? 1 : 0;
-                    return orderA - orderB || a.platform_id - b.platform_id;
-                })
-                .slice(0, 5);
+                .filter(route => route.route_no && route.dest_ch && route.time_ch) // 過濾無效數據
+                .sort((a, b) => a.platform_id - b.platform_id) // 按 platform_id 排序
+                .slice(0, 5); // 最多 5 個
 
             if (routes.length === 0) {
                 trainDisplay.innerHTML += '<p class="error">NO ROUTE DATA AVAILABLE</p>';
@@ -345,11 +341,11 @@
 
                 const routeNo = document.createElement('div');
                 routeNo.className = 'route-no';
-                routeNo.textContent = route.route_no || 'N/A';
+                routeNo.textContent = route.route_no;
 
                 const dest = document.createElement('div');
                 dest.className = 'dest';
-                dest.textContent = route.dest_ch || '未知';
+                dest.textContent = route.dest_ch;
 
                 routeInfo.appendChild(routeNo);
                 routeInfo.appendChild(dest);
@@ -359,11 +355,10 @@
 
                 const time = document.createElement('div');
                 time.className = 'time';
-                // 直接使用 time_ch 顯示
                 time.textContent = route.time_ch === '-' ? '-' : 
                                    route.time_ch === '即將抵達' ? '即將抵達' : 
                                    route.time_ch === '正在離開' ? '正在離開' : 
-                                   route.time_ch || 'N/A';
+                                   route.time_ch;
 
                 const trainLength = document.createElement('div');
                 trainLength.className = 'train-length';
