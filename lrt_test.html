@@ -80,7 +80,16 @@
             align-items: center;
             height: 70px;
             overflow: hidden;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            transition: opacity 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease; /* 加過渡效果 */
+            opacity: 1;
+        }
+
+        .train-card.hidden {
+            opacity: 0;
+            height: 0;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
         }
 
         .train-card:hover {
@@ -147,6 +156,7 @@
             padding: 10px;
             background: rgba(255, 0, 0, 0.1);
             border-radius: 5px;
+            transition: opacity 0.3s ease;
         }
     </style>
 </head>
@@ -290,92 +300,21 @@
             document.getElementById('datetimeDisplay').textContent = `${hours}:${minutes} ${day}/${month}/${year} update:${String(secondsRemaining).padStart(2, '0')}`;
         }
 
-        async function updateDisplay(stationId = stationSelect.value) {
-            const trainDisplay = document.getElementById('trainDisplay');
+        // 生成或更新單個 train-card
+        function createOrUpdateTrainCard(route, existingCard = null) {
+            const trainCard = existingCard || document.createElement('div');
+            trainCard.className = 'train-card';
 
-            if (!stationId) {
-                trainDisplay.innerHTML = '<p class="error">PLEASE SELECT STATION</p>';
-                return;
-            }
-
-            trainDisplay.innerHTML = '<p>LOADING...</p>';
-            const data = await getTrainSchedule(stationId);
-
-            if (!data) {
-                trainDisplay.innerHTML = '<p class="error">API CONNECTION FAILED</p>';
-                return;
-            }
-
-            if (data.status !== 0) {
-                console.warn('API Status is not 0:', data.status);
-                trainDisplay.innerHTML = '';
-            } else {
-                trainDisplay.innerHTML = '';
-            }
-
-            if (!data.platform_list || !Array.isArray(data.platform_list)) {
-                trainDisplay.innerHTML += '<p class="error">NO PLATFORM DATA</p>';
-                return;
-            }
-
-            // 追蹤每個 platform_id 已顯示嘅路線數
-            const platformRouteIndex = new Map();
-            const routes = [];
-
-            console.log('Processing platform_list:', data.platform_list);
-
-            // 多次遍歷 platform_list，直到搵夠 5 條或無更多路線
-            let i = 0;
-            while (routes.length < 5 && i < data.platform_list.length * 2) { // 限制最多遍歷兩次，避免無限循環
-                const platform = data.platform_list[i % data.platform_list.length]; // 循環取 platform
-                console.log(`Platform ID: ${platform.platform_id}, Route List:`, platform.route_list);
-
-                if (platform.route_list && platform.route_list.length > 0) {
-                    // 獲取當前 platform_id 已顯示嘅路線數
-                    const currentIndex = platformRouteIndex.get(platform.platform_id) || 0;
-                    // 過濾有效路線
-                    const validRoutes = platform.route_list.filter(route => 
-                        route.route_no && route.dest_ch && route.time_ch
-                    );
-                    console.log(`Valid Routes for Platform ${platform.platform_id}:`, validRoutes);
-
-                    // 如果有更多路線可以顯示
-                    if (currentIndex < validRoutes.length) {
-                        const route = validRoutes[currentIndex];
-                        routes.push({ ...route, platform_id: platform.platform_id });
-                        console.log(`Added Route:`, route);
-                        // 更新已顯示路線數
-                        platformRouteIndex.set(platform.platform_id, currentIndex + 1);
-                    } else {
-                        console.log(`No more valid routes for Platform ${platform.platform_id}`);
-                    }
-                }
-                i++;
-            }
-
-            console.log('Final Routes to Display:', routes);
-
-            if (routes.length === 0) {
-                trainDisplay.innerHTML += '<p class="error">NO ROUTE DATA AVAILABLE</p>';
-                return;
-            }
-
-            routes.forEach((route, index) => {
-                const trainCard = document.createElement('div');
-                trainCard.className = 'train-card';
-
+            if (!existingCard) {
                 const routeInfo = document.createElement('div');
                 routeInfo.className = 'route-info';
 
                 const routeNo = document.createElement('div');
                 routeNo.className = 'route-no';
-                routeNo.textContent = route.route_no;
+                routeInfo.appendChild(routeNo);
 
                 const dest = document.createElement('div');
                 dest.className = 'dest';
-                dest.textContent = route.dest_ch;
-
-                routeInfo.appendChild(routeNo);
                 routeInfo.appendChild(dest);
 
                 const details = document.createElement('div');
@@ -383,28 +322,106 @@
 
                 const time = document.createElement('div');
                 time.className = 'time';
-                time.textContent = route.time_ch === '-' ? '-' : 
-                                   route.time_ch === '即將抵達' ? '即將抵達' : 
-                                   route.time_ch === '正在離開' ? '正在離開' : 
-                                   route.time_ch;
+                details.appendChild(time);
 
                 const trainLength = document.createElement('div');
                 trainLength.className = 'train-length';
-                const length = route.train_length ? parseInt(route.train_length) : 0;
-                for (let i = 0; i < Math.min(length, 2); i++) {
-                    const trainImg = document.createElement('img');
-                    trainImg.className = 'train-image';
-                    trainImg.src = '12nanbu.png';
-                    trainLength.appendChild(trainImg);
-                }
-
-                details.appendChild(time);
                 details.appendChild(trainLength);
 
                 trainCard.appendChild(routeInfo);
                 trainCard.appendChild(details);
-                trainDisplay.appendChild(trainCard);
-            });
+            }
+
+            const routeNo = trainCard.querySelector('.route-no');
+            const dest = trainCard.querySelector('.dest');
+            const time = trainCard.querySelector('.time');
+            const trainLength = trainCard.querySelector('.train-length');
+
+            routeNo.textContent = route.route_no;
+            dest.textContent = route.dest_ch;
+            time.textContent = route.time_ch === '-' ? '-' : 
+                               route.time_ch === '即將抵達' ? '即將抵達' : 
+                               route.time_ch === '正在離開' ? '正在離開' : 
+                               route.time_ch;
+
+            trainLength.innerHTML = '';
+            const length = route.train_length ? parseInt(route.train_length) : 0;
+            for (let i = 0; i < Math.min(length, 2); i++) {
+                const trainImg = document.createElement('img');
+                trainImg.className = 'train-image';
+                trainImg.src = '12nanbu.png';
+                trainLength.appendChild(trainImg);
+            }
+
+            return trainCard;
+        }
+
+        async function updateDisplay(stationId = stationSelect.value) {
+            const trainDisplay = document.getElementById('trainDisplay');
+
+            // 初次加載時顯示 Loading
+            if (trainDisplay.children.length === 0) {
+                trainDisplay.innerHTML = '<p>LOADING...</p>';
+            }
+
+            const data = await getTrainSchedule(stationId);
+
+            if (!stationId || !data) {
+                trainDisplay.innerHTML = '<p class="error">API CONNECTION FAILED OR NO STATION SELECTED</p>';
+                return;
+            }
+
+            if (data.status !== 0 || !data.platform_list || !Array.isArray(data.platform_list)) {
+                trainDisplay.innerHTML = '<p class="error">NO VALID DATA</p>';
+                return;
+            }
+
+            // 獲取新路線數據
+            const platformRouteIndex = new Map();
+            const routes = [];
+            let i = 0;
+            while (routes.length < 6 && i < data.platform_list.length * 3) {
+                const platform = data.platform_list[i % data.platform_list.length];
+                if (platform.route_list && platform.route_list.length > 0) {
+                    const currentIndex = platformRouteIndex.get(platform.platform_id) || 0;
+                    const validRoutes = platform.route_list.filter(route => 
+                        route.route_no && route.dest_ch && route.time_ch
+                    );
+                    if (currentIndex < validRoutes.length) {
+                        const route = validRoutes[currentIndex];
+                        routes.push({ ...route, platform_id: platform.platform_id });
+                        platformRouteIndex.set(platform.platform_id, currentIndex + 1);
+                    }
+                }
+                i++;
+            }
+
+            if (routes.length === 0) {
+                trainDisplay.innerHTML = '<p class="error">NO ROUTE DATA AVAILABLE</p>';
+                return;
+            }
+
+            // 更新現有卡片或新增/移除
+            const existingCards = Array.from(trainDisplay.querySelectorAll('.train-card'));
+            for (let j = 0; j < Math.max(routes.length, existingCards.length); j++) {
+                if (j < routes.length) {
+                    // 有新路線數據
+                    if (j < existingCards.length) {
+                        // 更新現有卡片
+                        createOrUpdateTrainCard(routes[j], existingCards[j]);
+                        existingCards[j].classList.remove('hidden');
+                    } else {
+                        // 新增卡片
+                        const newCard = createOrUpdateTrainCard(routes[j]);
+                        trainDisplay.appendChild(newCard);
+                        setTimeout(() => newCard.classList.remove('hidden'), 10); // 觸發過渡
+                    }
+                } else if (j < existingCards.length) {
+                    // 移除多餘卡片
+                    existingCards[j].classList.add('hidden');
+                    setTimeout(() => existingCards[j].remove(), 300); // 等過渡完成再移除
+                }
+            }
 
             lastUpdateTime = new Date();
         }
