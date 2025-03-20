@@ -366,13 +366,24 @@
             const data = await getTrainSchedule(stationId);
 
             if (!stationId || !data) {
-                trainDisplay.innerHTML = '<p class="error">API CONNECTION FAILED OR NO STATION SELECTED</p>';
+                console.log('No station or API failed, keeping existing data');
+                const nonCardElements = trainDisplay.querySelectorAll(':not(.train-card)');
+                nonCardElements.forEach(element => {
+                    element.classList.add('hidden');
+                    setTimeout(() => element.remove(), 300);
+                });
+                trainDisplay.appendChild(document.createElement('p')).textContent = 'API CONNECTION FAILED';
                 return;
             }
 
             if (data.status === 0 || !data.platform_list || !Array.isArray(data.platform_list)) {
                 console.log('Invalid data detected:', { status: data.status, platform_list: data.platform_list });
-                trainDisplay.innerHTML = '<p class="error">NO VALID DATA</p>';
+                const nonCardElements = trainDisplay.querySelectorAll(':not(.train-card)');
+                nonCardElements.forEach(element => {
+                    element.classList.add('hidden');
+                    setTimeout(() => element.remove(), 300);
+                });
+                trainDisplay.appendChild(document.createElement('p')).textContent = 'NO VALID DATA';
                 return;
             }
 
@@ -403,7 +414,13 @@
             console.log('Final Routes to Display:', routes);
 
             if (routes.length === 0) {
-                trainDisplay.innerHTML = '<p class="error">NO ROUTE DATA AVAILABLE</p>';
+                console.log('No valid routes found, keeping existing data');
+                const nonCardElements = trainDisplay.querySelectorAll(':not(.train-card)');
+                nonCardElements.forEach(element => {
+                    element.classList.add('hidden');
+                    setTimeout(() => element.remove(), 300);
+                });
+                trainDisplay.appendChild(document.createElement('p')).textContent = 'NO ROUTE DATA AVAILABLE';
                 return;
             }
 
@@ -411,7 +428,7 @@
             const nonCardElements = trainDisplay.querySelectorAll(':not(.train-card)');
             nonCardElements.forEach(element => {
                 element.classList.add('hidden');
-                setTimeout(() => element.remove(), 300); // 平滑移除
+                setTimeout(() => element.remove(), 300);
             });
 
             // 更新或新增路線卡片
