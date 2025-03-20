@@ -301,6 +301,11 @@
         }
 
         function createOrUpdateTrainCard(route, existingCard = null) {
+            if (!route || !route.route_no || !route.dest_ch || !route.time_ch) {
+                console.error('Invalid route data:', route);
+                return null; // 返回 null 表示無效路線
+            }
+
             const trainCard = existingCard || document.createElement('div');
             trainCard.className = 'train-card';
 
@@ -336,6 +341,11 @@
             const time = trainCard.querySelector('.time');
             const trainLength = trainCard.querySelector('.train-length');
 
+            if (!routeNo || !dest || !time || !trainLength) {
+                console.error('Missing DOM elements in trainCard:', trainCard);
+                return null; // 如果 DOM 結構唔完整，返回 null
+            }
+
             routeNo.textContent = route.route_no;
             dest.textContent = route.dest_ch;
             time.textContent = route.time_ch === '-' ? '-' : 
@@ -358,7 +368,6 @@
         async function updateDisplay(stationId = stationSelect.value) {
             const trainDisplay = document.getElementById('trainDisplay');
 
-            // 初次加載顯示 Loading
             if (trainDisplay.children.length === 0) {
                 trainDisplay.innerHTML = '<p>LOADING...</p>';
             }
@@ -372,7 +381,10 @@
                     element.classList.add('hidden');
                     setTimeout(() => element.remove(), 300);
                 });
-                trainDisplay.appendChild(document.createElement('p')).textContent = 'API CONNECTION FAILED';
+                const errorMsg = document.createElement('p');
+                errorMsg.className = 'error';
+                errorMsg.textContent = 'API CONNECTION FAILED';
+                trainDisplay.appendChild(errorMsg);
                 return;
             }
 
@@ -383,7 +395,10 @@
                     element.classList.add('hidden');
                     setTimeout(() => element.remove(), 300);
                 });
-                trainDisplay.appendChild(document.createElement('p')).textContent = 'NO VALID DATA';
+                const errorMsg = document.createElement('p');
+                errorMsg.className = 'error';
+                errorMsg.textContent = 'NO VALID DATA';
+                trainDisplay.appendChild(errorMsg);
                 return;
             }
 
@@ -420,28 +435,33 @@
                     element.classList.add('hidden');
                     setTimeout(() => element.remove(), 300);
                 });
-                trainDisplay.appendChild(document.createElement('p')).textContent = 'NO ROUTE DATA AVAILABLE';
+                const errorMsg = document.createElement('p');
+                errorMsg.className = 'error';
+                errorMsg.textContent = 'NO ROUTE DATA AVAILABLE';
+                trainDisplay.appendChild(errorMsg);
                 return;
             }
 
-            // 移除 Loading 或其他非 train-card 元素
             const nonCardElements = trainDisplay.querySelectorAll(':not(.train-card)');
             nonCardElements.forEach(element => {
                 element.classList.add('hidden');
                 setTimeout(() => element.remove(), 300);
             });
 
-            // 更新或新增路線卡片
             const existingCards = Array.from(trainDisplay.querySelectorAll('.train-card'));
+            console.log('Existing Cards:', existingCards.length);
             for (let j = 0; j < Math.max(routes.length, existingCards.length); j++) {
                 if (j < routes.length) {
-                    if (j < existingCards.length) {
-                        createOrUpdateTrainCard(routes[j], existingCards[j]);
-                        existingCards[j].classList.remove('hidden');
+                    const newCard = createOrUpdateTrainCard(routes[j], j < existingCards.length ? existingCards[j] : null);
+                    if (newCard) {
+                        if (j < existingCards.length) {
+                            existingCards[j].classList.remove('hidden');
+                        } else {
+                            trainDisplay.appendChild(newCard);
+                            setTimeout(() => newCard.classList.remove('hidden'), 10);
+                        }
                     } else {
-                        const newCard = createOrUpdateTrainCard(routes[j]);
-                        trainDisplay.appendChild(newCard);
-                        setTimeout(() => newCard.classList.remove('hidden'), 10);
+                        console.log(`Failed to create/update card for route ${j}:`, routes[j]);
                     }
                 } else if (j < existingCards.length) {
                     existingCards[j].classList.add('hidden');
