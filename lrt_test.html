@@ -358,6 +358,7 @@
         async function updateDisplay(stationId = stationSelect.value) {
             const trainDisplay = document.getElementById('trainDisplay');
 
+            // 初次加載顯示 Loading
             if (trainDisplay.children.length === 0) {
                 trainDisplay.innerHTML = '<p>LOADING...</p>';
             }
@@ -369,7 +370,6 @@
                 return;
             }
 
-            // 修改檢查邏輯：status === 0 時才顯示錯誤
             if (data.status === 0 || !data.platform_list || !Array.isArray(data.platform_list)) {
                 console.log('Invalid data detected:', { status: data.status, platform_list: data.platform_list });
                 trainDisplay.innerHTML = '<p class="error">NO VALID DATA</p>';
@@ -381,7 +381,7 @@
             const platformRouteIndex = new Map();
             const routes = [];
             let i = 0;
-            while (routes.length < 5 && i < data.platform_list.length * 2) {
+            while (routes.length < 6 && i < data.platform_list.length * 3) {
                 const platform = data.platform_list[i % data.platform_list.length];
                 console.log(`Platform ID: ${platform.platform_id}, Route List:`, platform.route_list);
                 if (platform.route_list && platform.route_list.length > 0) {
@@ -407,6 +407,14 @@
                 return;
             }
 
+            // 移除 Loading 或其他非 train-card 元素
+            const nonCardElements = trainDisplay.querySelectorAll(':not(.train-card)');
+            nonCardElements.forEach(element => {
+                element.classList.add('hidden');
+                setTimeout(() => element.remove(), 300); // 平滑移除
+            });
+
+            // 更新或新增路線卡片
             const existingCards = Array.from(trainDisplay.querySelectorAll('.train-card'));
             for (let j = 0; j < Math.max(routes.length, existingCards.length); j++) {
                 if (j < routes.length) {
