@@ -1,163 +1,179 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>廣東話學習網站v1.2</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 0;
-            background-color: #f9f9f9;
-        }
-        header {
-            background-color: #0078D7;
-            color: white;
-            padding: 1rem;
-            text-align: center;
-        }
-        section {
-            margin: 1rem;
-            padding: 1rem;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-        h2 {
-            color: #333;
-        }
-        .word-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .word-item {
-            display: flex;
-            align-items: center;
-            padding: 5px 10px;
-            background-color: #f1f1f1;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        .word-item:hover {
-            background-color: #e0e0e0;
-        }
-        .emoji {
-            margin-right: 8px;
-        }
-        button {
-            margin-top: 10px;
-            padding: 5px 10px;
-            border: none;
-            background-color: #0078D7;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #005bb5;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>學寫繁體中文同廣東話發音</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400&display=swap" rel="stylesheet">
 </head>
-<body>
-    <header>
-        <h1>廣東話學習網站</h1>
-        <p>幫助言語發展的小朋友輕鬆學習廣東話</p>
-    </header>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen">
+  <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+    <h1 class="text-2xl font-bold mb-4 text-center">學寫繁體中文同廣東話發音</h1>
+    
+    <!-- 輸入框同輸入掣 -->
+    <div class="mb-4 flex space-x-2">
+      <label for="characterInput" class="block text-lg font-medium">輸入一個繁體中文字:</label>
+      <input id="characterInput" type="text" maxlength="1" class="w-full p-2 border rounded" placeholder="例如：學">
+      <button id="inputButton" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">輸入</button>
+    </div>
+    
+    <!-- Canvas 畫布 -->
+    <div class="mb-4">
+      <canvas id="drawingCanvas" width="200" height="200" class="border-2 border-gray-300"></canvas>
+    </div>
+    
+    <!-- 按鈕 -->
+    <div class="flex justify-between mb-4">
+      <button id="clearButton" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">清除畫布</button>
+      <button id="submitButton" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">提交評分</button>
+      <button id="speakButton" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">聽廣東話發音</button>
+    </div>
+    
+    <!-- 評分結果 -->
+    <div id="scoreDisplay" class="text-lg"></div>
+  </div>
 
-    <section id="categories">
-        <h2>詞語分類</h2>
-        <div id="word-list">正在加載中...</div>
-    </section>
+  <script>
+    const canvas = document.getElementById('drawingCanvas');
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+    let character = '';
 
-    <section id="sentence-builder">
-        <h2>組合句子</h2>
-        <p id="current-sentence">目前句子：<span id="sentence"></span></p>
-        <button onclick="playSentence()">播放句子</button>
-        <button onclick="clearSentence()">清空句子</button>
-    </section>
+    // 初始化畫布（空白）
+    function initCanvas() {
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
 
-    <script>
-        const sheetId = '1rPV6OItEhA9VSRfiUWwem6KNzMUzeSNmDEzaoDIH3FM'; // 替換為你的 Google Sheet ID
-        const apiKey = 'AIzaSyDLNfSUG5lZdlF5OJGYSJCWanvQdTSytm0'; // 替換為你的 Google API Key
-        const sheetUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/canto!A1:E999?key=${apiKey}`;
+    // 繪製半透明字圖
+    function drawCharacter() {
+      character = document.getElementById('characterInput').value;
+      if (!character) {
+        alert('請輸入一個字！');
+        return;
+      }
+      initCanvas();
+      ctx.font = '150px Noto Sans TC';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; // 半透明
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(character, canvas.width / 2, canvas.height / 2);
+    }
 
-        let sentence = [];
+    // 輸入掣事件
+    document.getElementById('inputButton').addEventListener('click', drawCharacter);
 
-        function playText(text) {
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'zh-HK';
-            speechSynthesis.speak(utterance);
-        }
+    // 滑鼠/觸控事件
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      startDrawing({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY });
+    });
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      draw({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY });
+    });
+    canvas.addEventListener('touchend', stopDrawing);
 
-        function addToSentence(word) {
-            sentence.push(word);
-            document.getElementById('sentence').textContent = sentence.join(' ');
-            playText(word);
-        }
+    function startDrawing(e) {
+      isDrawing = true;
+      draw(e);
+    }
 
-        function playSentence() {
-            const sentenceText = sentence.join(' ');
-            if (sentenceText) {
-                playText(sentenceText);
-            } else {
-                alert('請先加入一些詞語到句子！');
-            }
-        }
+    function draw(e) {
+      if (!isDrawing) return;
 
-        function clearSentence() {
-            sentence = [];
-            document.getElementById('sentence').textContent = '';
-        }
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
 
-        async function loadWords() {
-            try {
-                const response = await fetch(sheetUrl);
-                const data = await response.json();
-                const rows = data.values;
+      ctx.strokeStyle = 'black';
+      ctx.lineWidth = 5;
+      ctx.lineCap = 'round';
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    }
 
-                const categories = [];
+    function stopDrawing() {
+      isDrawing = false;
+      ctx.beginPath();
+    }
 
-                rows.slice(1).forEach(([category, word, , emoji, order]) => {
-                    if (!categories.find(c => c.name === category)) {
-                        categories.push({ name: category, order: parseInt(order) || 0, words: [] });
-                    }
-                    const categoryObj = categories.find(c => c.name === category);
-                    categoryObj.words.push({ word, emoji });
-                });
+    // 清除畫布
+    document.getElementById('clearButton').addEventListener('click', () => {
+      initCanvas();
+      document.getElementById('scoreDisplay').textContent = '';
+      character = ''; // 清除字，避免評分錯誤
+    });
 
-                categories.sort((a, b) => a.order - b.order);
+    // 提交評分
+    document.getElementById('submitButton').addEventListener('click', () => {
+      if (!character) {
+        document.getElementById('scoreDisplay').textContent = '請先輸入一個字並點擊「輸入」！';
+        return;
+      }
 
-                const wordListDiv = document.getElementById('word-list');
-                wordListDiv.innerHTML = '';
+      // 創建臨時 Canvas 畫標準字
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCtx.fillStyle = 'white';
+      tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+      tempCtx.font = '150px Noto Sans TC';
+      tempCtx.fillStyle = 'black';
+      tempCtx.textAlign = 'center';
+      tempCtx.textBaseline = 'middle';
+      tempCtx.fillText(character, tempCanvas.width / 2, tempCanvas.height / 2);
 
-                categories.forEach(({ name, words }) => {
-                    const section = document.createElement('section');
-                    section.innerHTML = `<h3>${name}</h3>`;
+      // 獲取標準字同用家畫嘅像素
+      const charData = tempCtx.getImageData(0, 0, canvas.width, canvas.height).data;
+      const userData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
 
-                    const wordContainer = document.createElement('div');
-                    wordContainer.className = 'word-container';
+      let overlapPixels = 0;
+      let userPixels = 0;
+      let charPixels = 0;
+      let outOfBoundsPixels = 0;
 
-                    words.forEach(({ word, emoji }) => {
-                        const wordItem = document.createElement('div');
-                        wordItem.className = 'word-item';
-                        wordItem.innerHTML = `${emoji || ''} ${word}`;
-                        wordItem.onclick = () => addToSentence(word);
-                        wordContainer.appendChild(wordItem);
-                    });
+      for (let i = 0; i < charData.length; i += 4) {
+        const isCharBlack = charData[i] < 255 || charData[i + 1] < 255 || charData[i + 2] < 255;
+        const isUserBlack = userData[i] < 255 || userData[i + 1] < 255 || userData[i + 2] < 255;
 
-                    section.appendChild(wordContainer);
-                    wordListDiv.appendChild(section);
-                });
-            } catch (error) {
-                console.error('Error loading words:', error);
-            }
-        }
+        if (isCharBlack) charPixels++;
+        if (isUserBlack) userPixels++;
+        if (isCharBlack && isUserBlack) overlapPixels++;
+        if (isUserBlack && !isCharBlack) outOfBoundsPixels++;
+      }
 
-        loadWords();
-    </script>
+      // 計算覆蓋率同出界比例
+      const coverage = charPixels > 0 ? (overlapPixels / charPixels) * 100 : 0;
+      const outOfBoundsRatio = userPixels > 0 ? (outOfBoundsPixels / userPixels) * 100 : 0;
+      let score = Math.min(Math.round(coverage), 100);
+      score = Math.max(score - Math.round(outOfBoundsRatio * 0.5), 0); // 每 10% 出界扣 5 分
+
+      document.getElementById('scoreDisplay').textContent = `評分：${score} / 100（覆蓋率：${Math.round(coverage)}%，出界：${Math.round(outOfBoundsRatio)}%）`;
+    });
+
+    // 廣東話發音
+    document.getElementById('speakButton').addEventListener('click', () => {
+      const text = document.getElementById('characterInput').value;
+      if (text) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'zh-HK';
+        speechSynthesis.speak(utterance);
+      } else {
+        alert('請先輸入一個字！');
+      }
+    });
+
+    // 初始化
+    initCanvas();
+  </script>
 </body>
 </html>
