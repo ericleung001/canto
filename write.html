@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>學寫繁體中文同廣東話發音</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen">
+  <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+    <h1 class="text-2xl font-bold mb-4 text-center">學寫繁體中文同廣東話發音</h1>
+    
+    <!-- 輸入框 -->
+    <div class="mb-4">
+      <label for="characterInput" class="block text-lg font-medium">輸入一個繁體中文字:</label>
+      <input id="characterInput" type="text" maxlength="1" class="w-full p-2 border rounded" placeholder="例如：學" oninput="drawCharacter()">
+    </div>
+    
+    <!-- Canvas 畫布 -->
+    <div class="mb-4">
+      <canvas id="drawingCanvas" width="200" height="200" class="border-2 border-gray-300"></canvas>
+    </div>
+    
+    <!-- 按鈕 -->
+    <div class="flex justify-between mb-4">
+      <button id="clearButton" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">清除畫布</button>
+      <button id="submitButton" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">提交評分</button>
+      <button id="speakButton" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">聽廣東話發音</button>
+    </div>
+    
+    <!-- 評分結果 -->
+    <div id="scoreDisplay" class="text-lg"></div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('drawingCanvas');
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+    let character = '';
+
+    // 初始化畫布
+    function initCanvas() {
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      drawCharacter();
+    }
+
+    // 繪製半透明字圖
+    function drawCharacter() {
+      character = document.getElementById('characterInput').value;
+      initCanvas();
+      if (character) {
+        ctx.font = '150px Noto Sans TC';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; // 半透明
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(character, canvas.width / 2, canvas.height / 2);
+      }
+    }
+
+    // 滑鼠/觸控事件
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      startDrawing({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY });
+    });
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      draw({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY });
+    });
+    canvas.addEventListener('touchend', stopDrawing);
+
+    function startDrawing(e) {
+      isDrawing = true;
+      draw(e);
+    }
+
+    function draw(e) {
+      if (!isDrawing) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      ctx.strokeStyle = 'black';
+      ctx.lineWidth = 5;
+      ctx.lineCap = 'round';
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    }
+
+    function stopDrawing() {
+      isDrawing = false;
+      ctx.beginPath();
+    }
+
+    // 清除畫布
+    document.getElementById('clearButton').addEventListener('click', () => {
+      initCanvas();
+      document.getElementById('scoreDisplay').textContent = '';
+    });
+
+    // 提交評分
+    document.getElementById('submitButton').addEventListener('click', () => {
+      if (!character) {
+        document.getElementById('scoreDisplay').textContent = '請先輸入一個字！';
+        return;
+      }
+
+      // 創建臨時 Canvas 畫標準字
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCtx.fillStyle = 'white';
+      tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+      tempCtx.font = '150px Noto Sans TC';
+      tempCtx.fillStyle = 'black';
+      tempCtx.textAlign = 'center';
+      tempCtx.textBaseline = 'middle';
+      tempCtx.fillText(character, tempCanvas.width / 2, tempCanvas.height / 2);
+
+      // 獲取標準字同用家畫嘅像素
+      const charData = tempCtx.getImageData(0, 0, canvas.width, canvas.height).data;
+      const userData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+
+      let overlapPixels = 0;
+      let userPixels = 0;
+      let charPixels = 0;
+      let outOfBoundsPixels = 0;
+
+      for (let i = 0; i < charData.length; i += 4) {
+        const isCharBlack = charData[i] < 255 || charData[i + 1] < 255 || charData[i + 2] < 255;
+        const isUserBlack = userData[i] < 255 || userData[i + 1] < 255 || userData[i + 2] < 255;
+
+        if (isCharBlack) charPixels++;
+        if (isUserBlack) userPixels++;
+        if (isCharBlack && isUserBlack) overlapPixels++;
+        if (isUserBlack && !isCharBlack) outOfBoundsPixels++;
+      }
+
+      // 計算覆蓋率同出界比例
+      const coverage = charPixels > 0 ? (overlapPixels / charPixels) * 100 : 0;
+      const outOfBoundsRatio = userPixels > 0 ? (outOfBoundsPixels / userPixels) * 100 : 0;
+      let score = Math.min(Math.round(coverage), 100);
+      score = Math.max(score - Math.round(outOfBoundsRatio * 0.5), 0); // 每 10% 出界扣 5 分
+
+      document.getElementById('scoreDisplay').textContent = `評分：${score} / 100（覆蓋率：${Math.round(coverage)}%，出界：${Math.round(outOfBoundsRatio)}%）`;
+    });
+
+    // 廣東話發音
+    document.getElementById('speakButton').addEventListener('click', () => {
+      const text = document.getElementById('characterInput').value;
+      if (text) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'zh-HK';
+        speechSynthesis.speak(utterance);
+      } else {
+        alert('請先輸入一個字！');
+      }
+    });
+
+    // 初始化
+    initCanvas();
+  </script>
+</body>
+</html>
