@@ -136,7 +136,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>學寫繁體中文同廣東話發音v2.1</h1>
+    <h1>學寫繁體中文同廣東話發音v2.2</h1>
     
     <div class="input-group">
       <label for="characterInput">輸入一個繁體中文字:</label>
@@ -320,7 +320,7 @@
       // 檢查筆畫數
       const userStrokeCount = userStrokes.length;
       const strokeDifference = Math.abs(userStrokeCount - standardStrokeCount) / standardStrokeCount;
-      if (strokeDifference > 0.1) { // 如果筆畫數差異超過 30%，當作寫錯字
+      if (strokeDifference > 2) { // 如果筆畫數差異超過 30%，當作寫錯字
         document.getElementById('scoreDisplay').textContent = '評分：0 / 100（寫錯字，請寫正確嘅字！）';
         return;
       }
