@@ -136,7 +136,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>學寫繁體中文同廣東話發音v1.4</h1>
+    <h1>學寫繁體中文同廣東話發音v1.5</h1>
     
     <div class="input-group">
       <label for="characterInput">輸入一個繁體中文字:</label>
@@ -365,9 +365,9 @@
         }
       }
 
-      const similarityScore = Math.max(30, userPixels > 0 ? Math.round((matchingPixels / userPixels) * 200) : 0); // 保底相似度 30%
+      const similarityScore = Math.max(0, userPixels > 0 ? Math.round((matchingPixels / userPixels) * 70) : 0); // 保底相似度 30%
       const outOfBoundsRatio = userPixels > 0 ? (outOfBoundsPixels / userPixels) * 100 * 0.5 : 0; // 出界比例減半
-      const finalScore = Math.max(20, Math.max(similarityScore - Math.round(outOfBoundsRatio * 0.2), 0)); // 每 10% 出界扣 2 分，保底分數 20 分
+      const finalScore = Math.max(0, Math.max(similarityScore - Math.round(outOfBoundsRatio * 0.2), 0)); // 每 10% 出界扣 2 分，保底分數 20 分
 
       document.getElementById('scoreDisplay').textContent = `評分：${finalScore} / 100（字形相似度：${similarityScore}%，出界：${Math.round(outOfBoundsRatio)}%）`;
     }
