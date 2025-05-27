@@ -136,7 +136,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>學寫繁體中文同廣東話發音v1.14</h1>
+    <h1>學寫繁體中文同廣東話發音v2.1</h1>
     
     <div class="input-group">
       <label for="characterInput">輸入一個繁體中文字:</label>
@@ -166,6 +166,7 @@
     let userStrokes = [];
     let isDrawing = false;
     let drawingCanvas, drawingCtx;
+    let standardStrokeCount = 0;
 
     function initCanvas() {
       const canvasContainer = document.querySelector('.canvas-container');
@@ -243,12 +244,13 @@
         showOutline: true,
         strokeColor: 'rgba(0, 0, 0, 0.2)',
         drawingWidth: 5,
-        onLoadCharacterData: (error) => {
-          if (error) {
+        onLoadCharacterData: (charData) => {
+          if (!charData) {
             alert('字庫無呢個字，請試另一個字！');
             initCanvas();
             return;
           }
+          standardStrokeCount = charData.strokes.length; // 獲取標準筆畫數
           document.getElementById('scoreDisplay').textContent = '';
         },
         onLoadError: (error) => {
@@ -315,6 +317,14 @@
         return;
       }
 
+      // 檢查筆畫數
+      const userStrokeCount = userStrokes.length;
+      const strokeDifference = Math.abs(userStrokeCount - standardStrokeCount) / standardStrokeCount;
+      if (strokeDifference > 0.1) { // 如果筆畫數差異超過 30%，當作寫錯字
+        document.getElementById('scoreDisplay').textContent = '評分：0 / 100（寫錯字，請寫正確嘅字！）';
+        return;
+      }
+
       fallbackScoring(userData);
     });
 
@@ -333,7 +343,7 @@
 
       const charData = tempCtx.getImageData(0, 0, drawingCanvas.width, drawingCanvas.height).data;
 
-      const tolerance = 5; // 放寬容差，由 5 改為 10 像素
+      const tolerance = 10;
       let matchingPixels = 0;
       let userPixels = 0;
       let outOfBoundsPixels = 0;
@@ -365,9 +375,9 @@
         }
       }
 
-      const similarityScore = Math.max(0, userPixels > 0 ? Math.round((matchingPixels / userPixels) * 100) : 0); // 保底相似度 30%
-      const outOfBoundsRatio = userPixels > 0 ? (outOfBoundsPixels / userPixels) * 100  : 0; // 出界比例減半
-      const finalScore = Math.max(0, Math.max(similarityScore - Math.round(outOfBoundsRatio * 0.2), 0)); // 每 10% 出界扣 2 分，保底分數 20 分
+      const similarityScore = Math.max(30, userPixels > 0 ? Math.round((matchingPixels / userPixels) * 100) : 0);
+      const outOfBoundsRatio = userPixels > 0 ? (outOfBoundsPixels / userPixels) * 100 * 0.5 : 0;
+      const finalScore = Math.max(20, Math.max(similarityScore - Math.round(outOfBoundsRatio * 0.2), 0));
 
       document.getElementById('scoreDisplay').textContent = `評分：${finalScore} / 100（字形相似度：${similarityScore}%，出界：${Math.round(outOfBoundsRatio)}%）`;
     }
