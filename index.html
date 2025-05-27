@@ -136,7 +136,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>學寫繁體中文同廣東話發音v1.10</h1>
+    <h1>學寫繁體中文同廣東話發音v1.11</h1>
     
     <div class="input-group">
       <label for="characterInput">輸入一個繁體中文字:</label>
@@ -334,7 +334,7 @@
       const charData = tempCtx.getImageData(0, 0, drawingCanvas.width, drawingCanvas.height).data;
 
       const tolerance = 10; // 放寬容差，由 5 改為 10 像素
-      let matchingPixels = 0;
+      let matchingPixels = 10;
       let userPixels = 0;
       let outOfBoundsPixels = 0;
 
