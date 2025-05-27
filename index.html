@@ -141,7 +141,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>學寫繁體中文同廣東話發音v2.3</h1>
+    <h1>學寫繁體中文同廣東話發音v2.4</h1>
     
     <div class="input-group">
       <label for="characterInput">輸入一個繁體中文字:</label>
@@ -303,7 +303,7 @@
           if(isLoadingCharacter) { // 如果10秒後仍然在載入狀態
             forceEnableUI('字元載入超時，請重試或檢查網絡。');
           }
-      }, 10000); // 10 秒
+      }, 30000); // 10 秒
 
       initCanvas(); 
       standardStrokeCount = -1; 
