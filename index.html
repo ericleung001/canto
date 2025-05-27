@@ -89,34 +89,39 @@
       min-width: 120px;
       transition: background-color 0.2s;
     }
+    button:disabled {
+      background-color: #9ca3af; /* 灰色表示禁用 */
+      cursor: not-allowed;
+    }
     #inputButton {
       background-color: #f59e0b;
     }
-    #inputButton:hover {
+    #inputButton:hover:not(:disabled) {
       background-color: #d97706;
     }
     #clearButton {
       background-color: #ef4444;
     }
-    #clearButton:hover {
+    #clearButton:hover:not(:disabled) {
       background-color: #dc2626;
     }
     #submitButton {
       background-color: #3b82f6;
     }
-    #submitButton:hover {
+    #submitButton:hover:not(:disabled) {
       background-color: #2563eb;
     }
     #speakButton {
       background-color: #10b981;
     }
-    #speakButton:hover {
+    #speakButton:hover:not(:disabled) {
       background-color: #059669;
     }
     #scoreDisplay {
       font-size: 1.125rem;
       color: #333;
       text-align: center;
+      min-height: 1.5em; /* 避免文字消失時跳動 */
     }
     @media (min-width: 768px) {
       .input-group {
@@ -136,7 +141,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>學寫繁體中文同廣東話發音v2.2</h1>
+    <h1>學寫繁體中文同廣東話發音v2.3</h1>
     
     <div class="input-group">
       <label for="characterInput">輸入一個繁體中文字:</label>
@@ -166,25 +171,42 @@
     let userStrokes = [];
     let isDrawing = false;
     let drawingCanvas, drawingCtx;
-    let standardStrokeCount = 0;
+    let standardStrokeCount = -1; 
+    let isLoadingCharacter = false; 
+    let loadingTimeoutId = null; // 用於載入超時
+
+    const characterInputElement = document.getElementById('characterInput');
+    const inputButtonElement = document.getElementById('inputButton');
+    const clearButtonElement = document.getElementById('clearButton');
+    const submitButtonElement = document.getElementById('submitButton');
+    const speakButtonElement = document.getElementById('speakButton');
+    const scoreDisplayElement = document.getElementById('scoreDisplay');
+    const hanziCanvasElement = document.getElementById('hanziCanvas');
+    const drawingCanvasElement = document.getElementById('drawingCanvas');
+    const canvasContainerElement = document.querySelector('.canvas-container');
+
+    function setButtonsDisabledState(disabled) {
+        console.log(`[Debug] Setting buttons disabled state to: ${disabled}`);
+        if (inputButtonElement) inputButtonElement.disabled = disabled;
+        if (clearButtonElement) clearButtonElement.disabled = disabled;
+        if (submitButtonElement) submitButtonElement.disabled = disabled;
+        if (speakButtonElement) speakButtonElement.disabled = disabled;
+    }
 
     function initCanvas() {
-      const canvasContainer = document.querySelector('.canvas-container');
-      const hanziCanvas = document.getElementById('hanziCanvas');
-      hanziCanvas.innerHTML = '';
-      drawingCanvas = document.getElementById('drawingCanvas');
-      drawingCtx = drawingCanvas.getContext('2d');
-      drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
-      if (writer) {
-        writer.setCharacter('');
-        writer = null;
-      }
-      userStrokes = [];
-      document.getElementById('scoreDisplay').textContent = '';
+      console.log("[Debug] initCanvas called");
+      hanziCanvasElement.innerHTML = ''; 
+      drawingCtx = drawingCanvasElement.getContext('2d');
+      
+      const size = canvasContainerElement.clientWidth;
+      drawingCanvasElement.width = size;
+      drawingCanvasElement.height = size;
+      console.log(`[Debug] Canvas size set to: ${size}x${size}`);
 
-      const size = canvasContainer.clientWidth;
-      drawingCanvas.width = size;
-      drawingCanvas.height = size;
+      drawingCtx.clearRect(0, 0, drawingCanvasElement.width, drawingCanvasElement.height);
+      
+      userStrokes = [];
+      if(scoreDisplayElement && !isLoadingCharacter) scoreDisplayElement.textContent = ''; // 只有在非載入狀態下清除
 
       drawGrid();
       bindDrawingEvents();
@@ -195,77 +217,168 @@
       drawingCtx.strokeStyle = 'rgba(128, 128, 128, 0.5)';
       drawingCtx.lineWidth = 1;
       drawingCtx.setLineDash([5, 5]);
-      const size = drawingCanvas.width;
-      drawingCtx.moveTo(0, 0);
-      drawingCtx.lineTo(size, 0);
-      drawingCtx.lineTo(size, size);
-      drawingCtx.lineTo(0, size);
+      const size = drawingCanvasElement.width;
+      const padding = 1; 
+      drawingCtx.moveTo(padding, padding);
+      drawingCtx.lineTo(size - padding, padding);
+      drawingCtx.lineTo(size - padding, size - padding);
+      drawingCtx.lineTo(padding, size - padding);
       drawingCtx.closePath();
+      drawingCtx.moveTo(padding, padding);
+      drawingCtx.lineTo(size-padding, size-padding);
+      drawingCtx.moveTo(size-padding, padding);
+      drawingCtx.lineTo(padding, size-padding);
+      drawingCtx.moveTo(size/2, padding);
+      drawingCtx.lineTo(size/2, size-padding);
+      drawingCtx.moveTo(padding, size/2);
+      drawingCtx.lineTo(size-padding, size/2);
       drawingCtx.stroke();
       drawingCtx.setLineDash([]);
     }
 
     function bindDrawingEvents() {
-      drawingCanvas.removeEventListener('mousedown', startDrawing);
-      drawingCanvas.removeEventListener('mousemove', draw);
-      drawingCanvas.removeEventListener('mouseup', stopDrawing);
-      drawingCanvas.removeEventListener('mouseout', stopDrawing);
-      drawingCanvas.removeEventListener('touchstart', startDrawing);
-      drawingCanvas.removeEventListener('touchmove', draw);
-      drawingCanvas.removeEventListener('touchend', stopDrawing);
+      drawingCanvasElement.removeEventListener('mousedown', startDrawing);
+      drawingCanvasElement.removeEventListener('mousemove', draw);
+      drawingCanvasElement.removeEventListener('mouseup', stopDrawing);
+      drawingCanvasElement.removeEventListener('mouseout', stopDrawing);
+      drawingCanvasElement.removeEventListener('touchstart', handleTouchStart);
+      drawingCanvasElement.removeEventListener('touchmove', handleTouchMove);
+      drawingCanvasElement.removeEventListener('touchend', stopDrawing);
 
-      drawingCanvas.addEventListener('mousedown', startDrawing);
-      drawingCanvas.addEventListener('mousemove', draw);
-      drawingCanvas.addEventListener('mouseup', stopDrawing);
-      drawingCanvas.addEventListener('mouseout', stopDrawing);
-      drawingCanvas.addEventListener('touchstart', (e) => {
-        e.preventDefault();
+      drawingCanvasElement.addEventListener('mousedown', startDrawing);
+      drawingCanvasElement.addEventListener('mousemove', draw);
+      drawingCanvasElement.addEventListener('mouseup', stopDrawing);
+      drawingCanvasElement.addEventListener('mouseout', stopDrawing);
+      drawingCanvasElement.addEventListener('touchstart', handleTouchStart, { passive: false });
+      drawingCanvasElement.addEventListener('touchmove', handleTouchMove, { passive: false });
+      drawingCanvasElement.addEventListener('touchend', stopDrawing);
+    }
+    
+    function handleTouchStart(e) {
+      e.preventDefault();
+      if (e.touches.length > 0) {
         startDrawing({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY });
-      });
-      drawingCanvas.addEventListener('touchmove', (e) => {
-        e.preventDefault();
+      }
+    }
+
+    function handleTouchMove(e) {
+      e.preventDefault();
+      if (e.touches.length > 0) {
         draw({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY });
-      });
-      drawingCanvas.addEventListener('touchend', stopDrawing);
+      }
+    }
+
+    function forceEnableUI(message = '操作已超時或出錯。') {
+        console.warn(`[Debug] Forcing UI enable. Reason: ${message}`);
+        clearTimeout(loadingTimeoutId);
+        isLoadingCharacter = false;
+        setButtonsDisabledState(false);
+        if (scoreDisplayElement) scoreDisplayElement.textContent = message;
+        writer = null; 
+        standardStrokeCount = -1;
     }
 
     function drawCharacter() {
-      character = document.getElementById('characterInput').value.trim();
+      character = characterInputElement.value.trim();
+      console.log(`[Debug] drawCharacter called for character: '${character}'`);
+
       if (!character) {
         alert('請輸入一個字！');
-        document.getElementById('scoreDisplay').textContent = '';
+        if (scoreDisplayElement) scoreDisplayElement.textContent = '';
+        if (writer) writer.setCharacter('');
+        writer = null;
+        standardStrokeCount = -1; 
+        initCanvas(); 
         return;
       }
-      initCanvas();
-      writer = HanziWriter.create('hanziCanvas', character, {
-        width: drawingCanvas.width,
-        height: drawingCanvas.height,
-        padding: 5,
-        showOutline: true,
-        strokeColor: 'rgba(0, 0, 0, 0.2)',
-        drawingWidth: 5,
-        onLoadCharacterData: (charData) => {
-          if (!charData) {
-            alert('字庫無呢個字，請試另一個字！');
-            initCanvas();
-            return;
+
+      isLoadingCharacter = true;
+      setButtonsDisabledState(true);
+      if (scoreDisplayElement) scoreDisplayElement.textContent = '載入中...';
+
+      // 清除之前的超時設置 (如果有)
+      if (loadingTimeoutId) clearTimeout(loadingTimeoutId);
+      // 設定載入超時 (例如 10 秒)
+      loadingTimeoutId = setTimeout(() => {
+          if(isLoadingCharacter) { // 如果10秒後仍然在載入狀態
+            forceEnableUI('字元載入超時，請重試或檢查網絡。');
           }
-          standardStrokeCount = charData.strokes.length; // 獲取標準筆畫數
-          document.getElementById('scoreDisplay').textContent = '';
-        },
-        onLoadError: (error) => {
-          alert('載入字庫失敗，請檢查網絡或試另一個字！');
-          initCanvas();
-        }
-      });
+      }, 10000); // 10 秒
+
+      initCanvas(); 
+      standardStrokeCount = -1; 
+      
+      console.log(`[Debug] Attempting HanziWriter.create for: ${character}. Canvas dimensions: ${drawingCanvasElement.width}x${drawingCanvasElement.height}`);
+      if (drawingCanvasElement.width === 0 || drawingCanvasElement.height === 0) {
+          console.error("[Debug] Canvas dimensions are zero. HanziWriter might fail.");
+          forceEnableUI('畫布尺寸錯誤，無法載入字元。');
+          return;
+      }
+
+      try {
+        writer = HanziWriter.create(hanziCanvasElement, character, {
+          width: drawingCanvasElement.width, 
+          height: drawingCanvasElement.height,
+          padding: 5,
+          showOutline: true,
+          strokeColor: 'rgba(0, 0, 0, 0.2)', 
+          drawingWidth: 5, 
+          onLoadCharacterData: (charData) => {
+            clearTimeout(loadingTimeoutId); // 清除超時
+            console.log("[Debug] onLoadCharacterData CALLED", charData);
+            isLoadingCharacter = false;
+            setButtonsDisabledState(false);
+
+            if (!charData || !charData.strokes) { 
+              alert('字庫無呢個字，或字元資料不完整，請試另一個字！');
+              if (scoreDisplayElement) scoreDisplayElement.textContent = '載入失敗，請試其他字。';
+              if (writer) writer.setCharacter('');
+              writer = null;
+              standardStrokeCount = -1; 
+              return;
+            }
+            standardStrokeCount = charData.strokes.length;
+            console.log(`[Debug] Standard stroke count set to: ${standardStrokeCount}`);
+            if (scoreDisplayElement) scoreDisplayElement.textContent = ''; 
+          },
+          onLoadError: (error) => {
+            clearTimeout(loadingTimeoutId); // 清除超時
+            console.error("[Debug] onLoadError CALLED", error);
+            isLoadingCharacter = false;
+            setButtonsDisabledState(false);
+            alert('載入字庫失敗，請檢查網絡或試另一個字！');
+            if (scoreDisplayElement) scoreDisplayElement.textContent = '載入錯誤。';
+            if (writer) writer.setCharacter('');
+            writer = null;
+            standardStrokeCount = -1;
+          }
+        });
+        console.log("[Debug] HanziWriter.create call completed. Writer object:", writer);
+      } catch (e) {
+        clearTimeout(loadingTimeoutId);
+        console.error("[Debug] Exception during HanziWriter.create call:", e);
+        forceEnableUI('創建 HanziWriter 時發生錯誤。');
+      }
     }
 
-    document.getElementById('inputButton').addEventListener('click', drawCharacter);
+    if (inputButtonElement) inputButtonElement.addEventListener('click', drawCharacter);
+    if (characterInputElement) {
+        characterInputElement.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault(); 
+                drawCharacter();
+            }
+        });
+    }
 
     function startDrawing(e) {
+      if (isLoadingCharacter) {
+          console.log("[Debug] Drawing prevented: isLoadingCharacter is true.");
+          return; 
+      }
       isDrawing = true;
-      userStrokes.push([]);
-      const rect = drawingCanvas.getBoundingClientRect();
+      userStrokes.push([]); 
+      const rect = drawingCanvasElement.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
       drawingCtx.beginPath();
@@ -273,131 +386,187 @@
     }
 
     function draw(e) {
-      if (!isDrawing) return;
-
-      const rect = drawingCanvas.getBoundingClientRect();
+      if (!isDrawing || isLoadingCharacter) return;
+      const rect = drawingCanvasElement.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-
-      if (x >= 0 && x <= drawingCanvas.width && y >= 0 && y <= drawingCanvas.height) {
-        userStrokes[userStrokes.length - 1].push({ x, y });
+      if (x >= 0 && x <= drawingCanvasElement.width && y >= 0 && y <= drawingCanvasElement.height) {
+        if (userStrokes.length > 0) {
+            userStrokes[userStrokes.length - 1].push({ x, y });
+        }
         drawingCtx.lineTo(x, y);
-        drawingCtx.strokeStyle = 'black';
-        drawingCtx.lineWidth = 5;
+        drawingCtx.strokeStyle = 'black'; 
+        drawingCtx.lineWidth = Math.max(2, drawingCanvasElement.width / 80); 
+        drawingCtx.lineCap = 'round'; 
+        drawingCtx.lineJoin = 'round'; 
         drawingCtx.stroke();
+      } else {
+        if(isDrawing) stopDrawing();
       }
     }
 
     function stopDrawing() {
-      isDrawing = false;
+      if (isDrawing) {
+        drawingCtx.closePath(); 
+        isDrawing = false;
+      }
     }
 
-    document.getElementById('clearButton').addEventListener('click', () => {
-      initCanvas();
-      if (character) drawCharacter();
+    if (clearButtonElement) clearButtonElement.addEventListener('click', () => {
+      console.log("[Debug] Clear button clicked.");
+      initCanvas(); 
+      if (character && writer) { 
+         writer.setCharacter(character); 
+      } else if (character && !writer) {
+        drawCharacter();
+      }
+      if (scoreDisplayElement) scoreDisplayElement.textContent = '';
     });
 
-    document.getElementById('submitButton').addEventListener('click', () => {
-      if (!character || !writer) {
-        document.getElementById('scoreDisplay').textContent = '請先輸入一個字並點擊「輸入」！';
+    if (submitButtonElement) submitButtonElement.addEventListener('click', () => {
+      console.log("[Debug] Submit button clicked.");
+      if (isLoadingCharacter) {
+        if (scoreDisplayElement) scoreDisplayElement.textContent = '字元載入中，請稍候...';
         return;
       }
-
-      const userData = drawingCtx.getImageData(0, 0, drawingCanvas.width, drawingCanvas.height).data;
-
-      let userPixels = 0;
-      for (let i = 0; i < userData.length; i += 4) {
-        if (userData[i] < 255 || userData[i + 1] < 255 || userData[i + 2] < 255) {
-          userPixels++;
+      if (!character || !writer) {
+        if (scoreDisplayElement) scoreDisplayElement.textContent = '請先輸入一個字並點擊「輸入」！';
+        return;
+      }
+      if (standardStrokeCount === -1) {
+        if (scoreDisplayElement) scoreDisplayElement.textContent = '字元資料未載入或載入失敗，無法評分。';
+        return;
+      }
+      const userDrawnStrokeCount = userStrokes.filter(stroke => stroke.length > 1).length; 
+      if (userDrawnStrokeCount === 0) {
+        if (scoreDisplayElement) scoreDisplayElement.textContent = '評分：0 / 100（未有畫字！）';
+        return;
+      }
+      if (standardStrokeCount === 0) { 
+        if (scoreDisplayElement) scoreDisplayElement.textContent = '提示：此字元標準筆劃數為零，將直接進行字形比對。';
+      } else { 
+        console.log(`[Debug] Comparing strokes: User=${userDrawnStrokeCount}, Standard=${standardStrokeCount}`);
+        const strokeDifference = Math.abs(userDrawnStrokeCount - standardStrokeCount) / standardStrokeCount;
+        if (strokeDifference > 2) { 
+          if (scoreDisplayElement) scoreDisplayElement.textContent = `評分：0 / 100（寫錯字，筆劃差異過大！） [調試資訊：用戶筆劃=${userDrawnStrokeCount}, 標準筆劃=${standardStrokeCount}]`;
+          return;
         }
       }
-
-      if (userPixels === 0 || userStrokes.length === 0) {
-        document.getElementById('scoreDisplay').textContent = '評分：0 / 100（未有畫字！）';
-        return;
-      }
-
-      // 檢查筆畫數
-      const userStrokeCount = userStrokes.length;
-      const strokeDifference = Math.abs(userStrokeCount - standardStrokeCount) / standardStrokeCount;
-      if (strokeDifference > 2) { // 如果筆畫數差異超過 30%，當作寫錯字
-        document.getElementById('scoreDisplay').textContent = '評分：0 / 100（寫錯字，請寫正確嘅字！）';
-        return;
-      }
-
-      fallbackScoring(userData);
+      const imageDataFromCanvas = drawingCtx.getImageData(0, 0, drawingCanvasElement.width, drawingCanvasElement.height);
+      fallbackScoring(imageDataFromCanvas.data);
     });
 
     function fallbackScoring(userData) {
+      console.log("[Debug] fallbackScoring called.");
       const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = drawingCanvas.width;
-      tempCanvas.height = drawingCanvas.height;
+      tempCanvas.width = drawingCanvasElement.width;
+      tempCanvas.height = drawingCanvasElement.height;
       const tempCtx = tempCanvas.getContext('2d');
-      tempCtx.fillStyle = 'white';
+      tempCtx.fillStyle = 'white'; 
       tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-      tempCtx.font = `${Math.round(drawingCanvas.width * 0.75)}px Noto Sans TC`;
+      const fontSize = Math.round(drawingCanvasElement.width * 0.8); 
+      tempCtx.font = `${fontSize}px Noto Sans TC, sans-serif`; 
       tempCtx.fillStyle = 'black';
       tempCtx.textAlign = 'center';
       tempCtx.textBaseline = 'middle';
       tempCtx.fillText(character, tempCanvas.width / 2, tempCanvas.height / 2);
-
-      const charData = tempCtx.getImageData(0, 0, drawingCanvas.width, drawingCanvas.height).data;
-
-      const tolerance = 10;
+      const charData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
       let matchingPixels = 0;
-      let userPixels = 0;
-      let outOfBoundsPixels = 0;
-
-      for (let y = 0; y < drawingCanvas.height; y++) {
-        for (let x = 0; x < drawingCanvas.width; x++) {
-          const i = (y * drawingCanvas.width + x) * 4;
-          const isUserBlack = userData[i] < 255 || userData[i + 1] < 255 || userData[i + 2] < 255;
-          if (isUserBlack) userPixels++;
-
-          let isNearChar = false;
-          for (let dy = -tolerance; dy <= tolerance; dy++) {
-            for (let dx = -tolerance; dx <= tolerance; dx++) {
-              const nx = x + dx;
-              const ny = y + dy;
-              if (nx >= 0 && nx < drawingCanvas.width && ny >= 0 && ny < drawingCanvas.height) {
-                const ni = (ny * drawingCanvas.width + nx) * 4;
-                if (charData[ni] < 255 || charData[ni + 1] < 255 || charData[ni + 2] < 255) {
-                  isNearChar = true;
-                  break;
+      let userDrawnPixels = 0; 
+      let charStandardPixels = 0; 
+      let penaltyOutOfBounds = 0; 
+      const tolerance = Math.max(3, Math.round(drawingCanvasElement.width / 100)); 
+      for (let y = 0; y < drawingCanvasElement.height; y++) {
+        for (let x = 0; x < drawingCanvasElement.width; x++) {
+          const i = (y * drawingCanvasElement.width + x) * 4;
+          const isUserPixelDrawn = userData[i+3] > 128; 
+          const isCharPixelStandard = charData[i+3] > 128; 
+          if (isUserPixelDrawn) {
+            userDrawnPixels++;
+            let isNearChar = false;
+            if (isCharPixelStandard) { 
+                isNearChar = true;
+            } else { 
+                for (let dy = -tolerance; dy <= tolerance; dy++) {
+                    for (let dx = -tolerance; dx <= tolerance; dx++) {
+                        const nx = x + dx;
+                        const ny = y + dy;
+                        if (nx >= 0 && nx < drawingCanvasElement.width && ny >= 0 && ny < drawingCanvasElement.height) {
+                            const ni = (ny * drawingCanvasElement.width + nx) * 4;
+                            if (charData[ni+3] > 128) { 
+                                isNearChar = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (isNearChar) break;
                 }
-              }
             }
-            if (isNearChar) break;
+            if (isNearChar) {
+              matchingPixels++;
+            } else {
+              penaltyOutOfBounds++;
+            }
           }
-
-          if (isUserBlack && isNearChar) matchingPixels++;
-          if (isUserBlack && !isNearChar) outOfBoundsPixels++;
+          if (isCharPixelStandard) {
+            charStandardPixels++;
+          }
         }
       }
-
-      const similarityScore = Math.max(30, userPixels > 0 ? Math.round((matchingPixels / userPixels) * 100) : 0);
-      const outOfBoundsRatio = userPixels > 0 ? (outOfBoundsPixels / userPixels) * 100 * 0.5 : 0;
-      const finalScore = Math.max(20, Math.max(similarityScore - Math.round(outOfBoundsRatio * 0.2), 0));
-
-      document.getElementById('scoreDisplay').textContent = `評分：${finalScore} / 100（字形相似度：${similarityScore}%，出界：${Math.round(outOfBoundsRatio)}%）`;
+      let score = 0;
+      if (charStandardPixels === 0 && userDrawnPixels > 0) { 
+        score = 0;
+      } else if (userDrawnPixels === 0 && charStandardPixels > 0) { 
+        score = 0;
+      } else if (userDrawnPixels === 0 && charStandardPixels === 0) { 
+        score = 100; 
+      } else {
+        const intersection = matchingPixels;
+        const union = userDrawnPixels + charStandardPixels - matchingPixels;
+        let iouScore = union > 0 ? (intersection / union) * 100 : 0;
+        const outOfBoundsRatio = userDrawnPixels > 0 ? (penaltyOutOfBounds / userDrawnPixels) : 0;
+        const penaltyFactor = 0.5; 
+        score = Math.max(0, iouScore - (outOfBoundsRatio * 100 * penaltyFactor));
+      }
+      score = Math.round(score);
+      if (userDrawnPixels > 0 && score < 20 && score > 0) score = 20; 
+      if (userDrawnPixels > 0 && score === 0) score = 0; 
+      if (scoreDisplayElement) scoreDisplayElement.textContent = `評分：${score} / 100 (字形相似度)`;
     }
 
-    document.getElementById('speakButton').addEventListener('click', () => {
-      const text = document.getElementById('characterInput').value.trim();
-      if (text) {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'zh-HK';
-        speechSynthesis.speak(utterance);
-      } else {
+    if (speakButtonElement) speakButtonElement.addEventListener('click', () => {
+      console.log("[Debug] Speak button clicked.");
+      const textToSpeak = characterInputElement.value.trim();
+      if (textToSpeak && !isLoadingCharacter) {
+        try {
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            utterance.lang = 'zh-HK'; 
+            speechSynthesis.speak(utterance);
+        } catch (e) {
+            console.error("[Debug] Speech synthesis failed:", e);
+            alert("無法播放語音，你的瀏覽器可能不支持此功能或需要更新。");
+        }
+      } else if (isLoadingCharacter) {
+         alert('字元載入中，請稍候再試發音！');
+      } 
+      else {
         alert('請先輸入一個字！');
       }
     });
 
+    // Initial page load
+    console.log("[Debug] Initializing page...");
     initCanvas();
+    setButtonsDisabledState(false); // 確保初始狀態按鈕是可用的
 
     window.addEventListener('resize', () => {
-      initCanvas();
-      if (character) drawCharacter();
+      console.log("[Debug] Window resize detected.");
+      // initCanvas(); // initCanvas 會在 drawCharacter 裡面調用
+      if (character) { // 只在有字元時才重繪
+        drawCharacter(); 
+      } else {
+        initCanvas(); // 如果沒有字元，僅重新初始化畫布 (例如調整網格)
+      }
     });
   </script>
 </body>
